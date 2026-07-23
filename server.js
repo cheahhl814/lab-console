@@ -74,7 +74,7 @@ app.post('/create-file', (req, res) => {
     if (!fullPath.startsWith(userHomeDir)) return res.status(403).send('Forbidden');
     fs.writeFile(fullPath, '', (err) => {
         if (err) return res.status(500).send('Failed to create file.');
-        res.send('File created.');
+        res.set('HX-Trigger', 'file-list-changed').send('File created.');
     });
 });
 
@@ -83,7 +83,7 @@ app.post('/create-folder', (req, res) => {
     if (!fullPath.startsWith(userHomeDir)) return res.status(403).send('Forbidden');
     fs.mkdir(fullPath, { recursive: true }, (err) => {
         if (err) return res.status(500).send('Failed to create folder.');
-        res.send('Folder created.');
+        res.set('HX-Trigger', 'file-list-changed').send('Folder created.');
     });
 });
 
@@ -95,7 +95,7 @@ app.post('/rename-item', (req, res) => {
     }
     fs.rename(oldPath, newPath, (err) => {
         if (err) return res.status(500).send('Failed to rename.');
-        res.send('Renamed successfully.');
+        res.set('HX-Trigger', 'file-list-changed').send('Renamed successfully.');
     });
 });
 
@@ -106,7 +106,7 @@ app.post('/delete-item', (req, res) => {
     }
     fs.rm(fullPath, { recursive: true, force: true }, (err) => {
         if (err) return res.status(500).send('Failed to delete.');
-        res.send('Deleted successfully.');
+        res.set('HX-Trigger', 'file-list-changed').send('Deleted successfully.');
     });
 });
 
@@ -145,7 +145,7 @@ app.post('/paste-item', (req, res) => {
     try {
         const destWithFilename = path.join(destinationPath, path.basename(sourcePath));
         copyRecursiveSync(sourcePath, destWithFilename);
-        res.send('Item pasted successfully.');
+        res.set('HX-Trigger', 'file-list-changed').send('Item pasted successfully.');
     } catch (error) {
         console.error('Paste error:', error);
         res.status(500).send('Failed to paste item.');
@@ -163,7 +163,7 @@ app.post('/move-item', (req, res) => {
     try {
         const destWithFilename = path.join(destinationPath, path.basename(sourcePath));
         fs.renameSync(sourcePath, destWithFilename);
-        res.send('Item moved successfully.');
+        res.set('HX-Trigger', 'file-list-changed').send('Item moved successfully.');
     } catch (error) {
         console.error('Move error:', error);
         res.status(500).send('Failed to move item.');
@@ -179,7 +179,7 @@ app.post('/duplicate-item', (req, res) => {
     try {
         const newPath = getUniquePath(sourcePath);
         copyRecursiveSync(sourcePath, newPath);
-        res.send('Item duplicated successfully.');
+        res.set('HX-Trigger', 'file-list-changed').send('Item duplicated successfully.');
     } catch (error) {
         console.error('Duplicate error:', error);
         res.status(500).send('Failed to duplicate item.');
@@ -260,7 +260,7 @@ app.post('/upload', upload.any(), (req, res) => {
         if (errors.length > 0) {
             return res.status(500).send('Some files failed to upload: ' + errors.join('; '));
         }
-        res.send('File(s) uploaded and moved successfully.');
+        res.set('HX-Trigger', 'file-list-changed').send('File(s) uploaded and moved successfully.');
     } else {
         res.status(400).send('No files uploaded.');
     }

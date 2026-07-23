@@ -172,24 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FILE BROWSER LOGIC ---
 
     // --- UPLOAD LOGIC ---
-    function handleFileSystemAction(endpoint, body, successMessage) {
-        fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => { throw new Error(text || 'Action failed.') });
-            }
-            return response.text();
-        })
-        .then(result => {
-            console.log(result);
-            document.body.dispatchEvent(new Event('file-list-changed'));
-        })
-        .catch(error => {
-            alert(error.message);
+    function handleFileSystemAction(endpoint, body) {
+        htmx.ajax('POST', endpoint, {
+            values: body,
+            swap: 'none' // response has no target; HX-Trigger from the server refreshes #file-list
+        }).catch(error => {
+            alert('Action failed: ' + error);
             console.error(`Error with ${endpoint}:`, error);
         });
     }
@@ -238,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(`Error uploading file ${file.name}:`, error);
             }
         }
-        document.body.dispatchEvent(new Event('file-list-changed'));
         fileInput.value = '';
     });
 
