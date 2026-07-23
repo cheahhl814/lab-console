@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Editor</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background-color: #1e1e1e; color: #d4d4d4; display: flex; flex-direction: column; }
+        #header { padding: 10px; background-color: #252526; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        #file-path { font-weight: bold; }
+        #header button, #header select {
+            padding: 5px 10px;
+            background-color: #3c3c3c;
+            border: 1px solid #555;
+            color: #f1f1f1;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        #header button:hover, #header select:hover { background-color: #4f4f4f; }
+        #save-btn { background-color: #0e639c; border-color: #1c73b3; }
+        #save-btn:hover { background-color: #1c73b3; }
+        #editor { flex-grow: 1; border: none; }
+        #status { padding: 5px 10px; background-color: #252526; font-size: 12px; text-align: right; }
+
+        /* Settings Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #252526; padding: 20px; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 300px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; }
+        .close-btn { background: none; border: none; color: #d4d4d4; font-size: 24px; cursor: pointer; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .setting-row label { font-size: 14px; }
+        .setting-row input[type="number"], .setting-row input[type="checkbox"] { background-color: #3c3c3c; border: 1px solid #555; color: #f1f1f1; padding: 5px; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div id="file-path">Loading...</div>
+        <div>
+            <select id="theme-select">
+                <option value="vs-dark">Dark</option>
+                <option value="vs-light">Light</option>
+                <option value="hc-black">High Contrast</option>
+            </select>
+            <button id="settings-btn">Settings</button>
+            <button id="commands-btn">Commands</button>
+            <button id="save-btn">Save</button>
+        </div>
+    </div>
+    <div id="editor" style="height: 80vh; width: 100vw;"></div>
+    <div id="status"></div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editor Settings</h2>
+                <button id="modal-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="settings-body">
+                <div class="setting-row">
+                    <label for="font-size-input">Font Size</label>
+                    <input type="number" id="font-size-input" min="10" max="30" value="14">
+                </div>
+                <div class="setting-row">
+                    <label for="minimap-checkbox">Enable Minimap</label>
+                    <input type="checkbox" id="minimap-checkbox">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.20.0/min/vs/loader.min.js"></script>
+    <script src="editor.js"></script>
+</body>
+</html>

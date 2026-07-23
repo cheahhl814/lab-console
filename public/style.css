@@ -1,0 +1,252 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: sans-serif;
+    overflow: hidden; /* Prevent body scroll */
+}
+
+#container {
+    display: flex;
+    height: calc(100vh - 25px); /* Adjust height for status-bar */
+    width: 100vw;
+}
+
+.gutter {
+    background-color: #333;
+    background-repeat: no-repeat;
+    background-position: 50%;
+}
+
+.gutter.gutter-horizontal {
+    cursor: col-resize;
+}
+
+#file-browser {
+    height: 100%;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+#file-browser-header {
+    padding: 10px;
+    font-weight: bold;
+    background-color: #252526;
+    border-bottom: 1px solid #333;
+}
+
+#file-browser-controls {
+    padding: 10px;
+    border-bottom: 1px solid #333;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+#upload-btn, #new-folder-btn {
+    flex-grow: 1;
+    padding: 8px;
+    background-color: #0e639c;
+    border: 1px solid #1c73b3;
+    color: #fff;
+    cursor: pointer;
+}
+
+#upload-btn:hover, #new-folder-btn:hover {
+    background-color: #1c73b3;
+}
+
+.control-group {
+    margin-top: 10px;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+#theme-select {
+    width: 100%;
+    padding: 8px;
+    background-color: #3c3c3c;
+    color: #f1f1f1;
+    border: 1px solid #555;
+}
+
+.hidden {
+    display: none;
+}
+
+#file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    padding-bottom: 50px; /* Add some space at the bottom */
+}
+
+#file-list li {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #2a2d2e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#file-list li:hover {
+    background-color: #2a2d2e;
+}
+
+#context-menu {
+    position: absolute;
+    background-color: #252526;
+    border: 1px solid #333;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    padding: 5px 0;
+    min-width: 150px;
+}
+
+#context-menu.hidden {
+    display: none;
+}
+
+#context-menu div {
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+#context-menu div:hover {
+    background-color: #2a2d2e;
+}
+
+#file-list li.directory {
+    font-weight: bold;
+}
+
+#terminal-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#tab-bar {
+    display: flex;
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #333;
+}
+
+.tab {
+    background-color: #2d2d2d;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-right: 1px solid #1e1e1e;
+    position: relative;
+}
+
+.tab.active {
+    background-color: #252526;
+    border-bottom: 1px solid #252526; /* Hide the parent border */
+    margin-bottom: -1px; /* Pull it down to cover the parent border */
+}
+
+.tab:hover {
+    background-color: #3a3a3a;
+}
+
+.close-tab-btn {
+    margin-left: 10px;
+    background: none;
+    border: none;
+    color: #d4d4d4;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.close-tab-btn:hover {
+    background-color: #555;
+}
+
+#new-tab-btn {
+    background-color: #2d2d2d;
+    border: none;
+    border-right: 1px solid #1e1e1e;
+    color: #d4d4d4;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+#new-tab-btn:hover {
+    background-color: #3a3a3a;
+}
+
+#terminal-views {
+    flex-grow: 1;
+    position: relative;
+}
+
+.terminal-view {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #252526;
+    border-top: 1px solid #333;
+    padding: 2px 10px;
+    box-sizing: border-box;
+    font-size: 12px;
+    height: 25px;
+    display: flex; /* Ensure it stays a flex container */
+    align-items: center; /* Vertically align items */
+    z-index: 10;
+    justify-content: flex-end; /* Push items to the right */
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+}
+
+.stat .label {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.stat .value {
+    font-family: monospace;
+}
+
+#file-list li.selected {
+    background-color: #0e639c;
+}
+
+/* New button style for status bar */
+.status-button {
+    background-color: #0e639c;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    margin-left: 10px;
+}
+
+.status-button:hover {
+    background-color: #1c73b3;
+}

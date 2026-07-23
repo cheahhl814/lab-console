@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HTML Terminal</title>
+    <link rel="stylesheet" href="/node_modules/xterm/css/xterm.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="container">
+        <div id="file-browser">
+            <div id="file-browser-header">File Browser</div>
+        <div id="file-browser-controls">
+            <div class="button-group">
+                <button id="upload-btn">Upload File</button>
+                <button id="new-folder-btn">New Folder</button>
+            </div>
+            <input type="file" id="file-input" class="hidden" multiple />
+            <div class="control-group">
+                <label for="theme-select">Theme:</label>
+                <select id="theme-select"></select>
+            </div>
+            <div class="control-group">
+                <input type="checkbox" id="show-hidden-checkbox" />
+                <label for="show-hidden-checkbox">Show Hidden Files</label>
+            </div>
+        </div>                    <ul id="file-list"></ul>
+                </div>
+                <div id="terminal-container">
+                    <div id="tab-bar">
+                        <button id="new-tab-btn">+</button>
+                    </div>
+                    <div id="terminal-views"></div>
+                </div>
+            </div>
+            
+            <div id="status-bar">
+                <div class="stat" id="version-stat">
+                    <span class="label">Version:</span>
+                    <span class="value"></span>
+                </div>
+                <div class="stat" id="cpu-stat">
+                    <span class="label">CPU:</span>
+                    <span class="value">0%</span>
+                </div>
+                <div class="stat" id="ram-stat">
+                    <span class="label">RAM:</span>
+                    <span class="value">0%</span>
+                </div>
+                <div class="stat" id="gpu-stat">
+                    <span class="label">GPU:</span>
+                    <span class="value">N/A</span>
+                </div>
+            </div>
+            
+            <div id="context-menu" class="hidden">
+    <div id="context-menu-item-copy">Copy</div>
+    <div id="context-menu-item-cut">Cut</div>
+    <div id="context-menu-item-paste">Paste</div>
+    <div id="context-menu-item-duplicate">Duplicate</div>
+    <div id="context-menu-item-download">Download</div>
+    <div id="context-menu-item-rename">Rename</div>
+    <div id="context-menu-item-delete">Delete</div>
+    <div id="context-menu-item-new-file">New File</div>
+    <div id="context-menu-item-new-folder">New Folder</div>
+    <div id="context-menu-item-upload">Upload File</div>
+    <div id="context-menu-item-open-with-monaco">Open with Monaco</div>
+</div>
+
+
+
+<!-- 3rd party libraries -->
+<script src="https://unpkg.com/split.js/dist/split.min.js"></script>
+
+<!-- App scripts -->
+    <script src="/node_modules/xterm/lib/xterm.js"></script>    <script src="/node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script src="main.js"></script>
+
+
+</body>
+</html>
