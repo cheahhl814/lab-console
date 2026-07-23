@@ -31,7 +31,7 @@
         </div>
         <ul id="file-list"
             hx-get="/files"
-            hx-vals='{"path": "."}'
+            hx-vals="js:{path: document.getElementById('current-path').value}"
             hx-trigger="load, file-list-changed from:body"
             hx-include="#show-hidden-checkbox"
             hx-swap="innerHTML"></ul>

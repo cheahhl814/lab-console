@@ -305,7 +305,7 @@ function renderFileListFragment({ currentPath, parentPath, entries }) {
 
     let html = '';
     if (parentPath !== null) {
-        html += `<li class="directory" hx-get="/files" hx-vals='{"path": ${JSON.stringify(parentPath)}}' hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">&#128194; .. (Up)</li>`;
+        html += `<li class="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">&#128194; .. (Up)</li>`;
     }
 
     for (const entry of entries) {
@@ -315,11 +315,11 @@ function renderFileListFragment({ currentPath, parentPath, entries }) {
         const escapedPath = escapeHtml(entryPath);
 
         if (entry.type === 'directory') {
-            html += `<li class="directory" data-path="${escapedPath}" data-type="directory" hx-get="/files" hx-vals='{"path": ${JSON.stringify(entryPath)}}' hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">${icon} ${escapedName}</li>`;
+            html += `<li class="directory" data-path="${escapedPath}" data-type="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: entryPath }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">${icon} ${escapedName}</li>`;
         } else if (viewableExtensions.test(entry.name)) {
-            html += `<li class="file" data-path="${escapedPath}" data-type="file" onclick="window.open('/view-file?path=' + encodeURIComponent('${escapedPath}'), '_blank')">${icon} ${escapedName}</li>`;
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" data-action="view">${icon} ${escapedName}</li>`;
         } else if (editableExtensions.test(entry.name)) {
-            html += `<li class="file" data-path="${escapedPath}" data-type="file" onclick="window.open('editor.html?path=' + encodeURIComponent('${escapedPath}'), '_blank')">${icon} ${escapedName}</li>`;
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" data-action="edit">${icon} ${escapedName}</li>`;
         } else {
             html += `<li class="file" data-path="${escapedPath}" data-type="file" style="cursor:default">${icon} ${escapedName}</li>`;
         }

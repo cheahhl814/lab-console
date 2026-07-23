@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'Github': { background: '#ffffff', foreground: '#3e3e3e', cursor: '#3e3e3e', selection: '#b4d5fe', black: '#3e3e3e', red: '#970b16', green: '#07962a', yellow: '#f8eec7', blue: '#003e8a', magenta: '#e94691', cyan: '#89d1ec', white: '#ffffff', brightBlack: '#666666', brightRed: '#de0000', brightGreen: '#87d5a2', brightYellow: '#fbf851', brightBlue: '#427ab3', brightMagenta: '#f5a9d1', brightCyan: '#b3f0ff', brightWhite: '#ffffff' }
     };
     let activeTheme = 'Default';
-    let currentPath = '.'; // Path for the file browser
     let userHomeDir = '';
     let uploadDestination = '';
 
@@ -244,14 +243,14 @@ document.addEventListener('DOMContentLoaded', () => {
     newFolderBtn.addEventListener('click', () => {
         const folderName = prompt('Enter new folder name:');
         if (folderName) {
-            handleFileSystemAction('/create-folder', { path: `${currentPath}/${folderName}` });
+            handleFileSystemAction('/create-folder', { path: `${document.getElementById('current-path').value}/${folderName}` });
         }
     });
 
 
     // UPLOAD EVENT LISTENERS
     uploadBtn.addEventListener('click', () => {
-        uploadDestination = currentPath;
+        uploadDestination = document.getElementById('current-path').value;
         fileInput.click();
     });
 
@@ -375,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
             contextMenuItems.newFile.onclick = () => {
                 const fileName = prompt('Enter new file name:');
                 if (fileName) {
-                    handleFileSystemAction('/create-file', { path: `${currentPath}/${fileName}` });
+                    handleFileSystemAction('/create-file', { path: `${document.getElementById('current-path').value}/${fileName}` });
                 }
             };
 
@@ -383,13 +382,13 @@ document.addEventListener('DOMContentLoaded', () => {
             contextMenuItems.newFolder.onclick = () => {
                 const folderName = prompt('Enter new folder name:');
                 if (folderName) {
-                    handleFileSystemAction('/create-folder', { path: `${currentPath}/${folderName}` });
+                    handleFileSystemAction('/create-folder', { path: `${document.getElementById('current-path').value}/${folderName}` });
                 }
             };
 
             // Upload action
             contextMenuItems.upload.onclick = () => {
-                uploadDestination = currentPath;
+                uploadDestination = document.getElementById('current-path').value;
                 fileInput.click();
             };
 
@@ -397,9 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
             contextMenuItems.paste.onclick = () => {
                 if (clipboard) {
                     if (clipboard.operation === 'cut') {
-                        handleFileSystemAction('/move-item', { sourcePath: clipboard.path, destinationPath: currentPath });
+                        handleFileSystemAction('/move-item', { sourcePath: clipboard.path, destinationPath: document.getElementById('current-path').value });
                     } else {
-                        handleFileSystemAction('/paste-item', { sourcePath: clipboard.path, destinationPath: currentPath });
+                        handleFileSystemAction('/paste-item', { sourcePath: clipboard.path, destinationPath: document.getElementById('current-path').value });
                     }
                     clipboard = null;
                 }
@@ -452,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (e.ctrlKey && e.key === 'v') {
             if (clipboard) {
-                handleFileSystemAction('/paste-item', { sourcePath: clipboard.path, destinationPath: currentPath });
+                handleFileSystemAction('/paste-item', { sourcePath: clipboard.path, destinationPath: document.getElementById('current-path').value });
             }
         }
     });
@@ -462,6 +461,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetLi) {
             fileList.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
             targetLi.classList.add('selected');
+
+            const action = targetLi.dataset.action;
+            if (action === 'view') {
+                window.open(`/view-file?path=${encodeURIComponent(targetLi.dataset.path)}`, '_blank');
+            } else if (action === 'edit') {
+                window.open(`editor.html?path=${encodeURIComponent(targetLi.dataset.path)}`, '_blank');
+            }
         }
     });
 
