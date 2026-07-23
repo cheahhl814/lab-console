@@ -9,7 +9,8 @@
 <body>
     <div id="container">
         <div id="file-browser">
-            <div id="file-browser-header">File Browser</div>
+            <div id="file-browser-header">File Browser: <span id="file-browser-header-text">~/.</span></div>
+            <input type="hidden" id="current-path" value=".">
         <div id="file-browser-controls">
             <div class="button-group">
                 <button id="upload-btn">Upload File</button>
@@ -21,10 +22,19 @@
                 <select id="theme-select"></select>
             </div>
             <div class="control-group">
-                <input type="checkbox" id="show-hidden-checkbox" />
+                <input type="checkbox" id="show-hidden-checkbox" name="showHidden" value="true"
+                       hx-get="/files" hx-target="#file-list" hx-swap="innerHTML"
+                       hx-vals="js:{path: document.getElementById('current-path').value}"
+                       hx-trigger="change" />
                 <label for="show-hidden-checkbox">Show Hidden Files</label>
             </div>
-        </div>                    <ul id="file-list"></ul>
+        </div>
+        <ul id="file-list"
+            hx-get="/files"
+            hx-vals='{"path": "."}'
+            hx-trigger="load, file-list-changed from:body"
+            hx-include="#show-hidden-checkbox"
+            hx-swap="innerHTML"></ul>
                 </div>
                 <div id="terminal-container">
                     <div id="tab-bar">

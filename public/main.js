@@ -176,59 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- FILE BROWSER LOGIC ---
-    function renderFileBrowser(data) {
-        fileList.innerHTML = '';
-        currentPath = data.currentPath;
-        fileBrowserHeader.textContent = `File Browser: ~/${data.currentPath}`;
-
-        if (data.parentPath !== null) {
-            const li = document.createElement('li');
-            li.innerHTML = '&#128194; .. (Up)';
-            li.className = 'directory';
-            li.addEventListener('click', () => fetchAndRenderFiles(data.parentPath));
-            fileList.appendChild(li);
-        }
-
-        data.entries.forEach(entry => {
-            const li = document.createElement('li');
-            const icon = entry.type === 'directory' ? '&#128194;' : '&#128196;';
-            li.innerHTML = `${icon} ${entry.name}`;
-            li.className = entry.type;
-            li.dataset.path = `${data.currentPath}/${entry.name}`;
-            li.dataset.type = entry.type;
-
-            if (entry.type === 'directory') {
-                li.addEventListener('click', () => fetchAndRenderFiles(li.dataset.path));
-            } else {
-                const viewableExtensions = /\.(html|htm|png|jpg|jpeg|gif|svg|webp|pdf)$/i;
-                const editableExtensions = /\.(txt|js|json|md|css|sh|py|java|c|cpp|go|rs)$/i;
-
-                if (viewableExtensions.test(entry.name)) {
-                    li.addEventListener('click', () => {
-                        window.open(`/view-file?path=${encodeURIComponent(li.dataset.path)}`, '_blank');
-                    });
-                } else if (editableExtensions.test(entry.name)) {
-                    li.addEventListener('click', () => {
-                        window.open(`editor.html?path=${encodeURIComponent(li.dataset.path)}`, '_blank');
-                    });
-                } else {
-                    li.style.cursor = 'default'; // Non-interactive files
-                }
-            }
-            fileList.appendChild(li);
-        });
-    }
-
-    function fetchAndRenderFiles(path = '.') {
-        const showHidden = showHiddenCheckbox.checked;
-        fetch(`/files?path=${encodeURIComponent(path)}&showHidden=${showHidden}`)
-            .then(response => response.ok ? response.json() : Promise.reject('Failed to fetch files'))
-            .then(renderFileBrowser)
-            .catch(error => {
-                console.error('Error fetching file list:', error);
-                fileList.innerHTML = '<li>Error loading files.</li>';
-            });
-    }
 
     // --- UPLOAD LOGIC ---
     function handleFileSystemAction(endpoint, body, successMessage) {
@@ -245,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(result => {
             console.log(result);
-            fetchAndRenderFiles(currentPath);
+            document.body.dispatchEvent(new Event('file-list-changed'));
         })
         .catch(error => {
             alert(error.message);
@@ -327,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(`Error uploading file ${file.name}:`, error);
             }
         }
-        fetchAndRenderFiles(currentPath);
+        document.body.dispatchEvent(new Event('file-list-changed'));
         fileInput.value = '';
     });
 
@@ -521,8 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INITIALIZATION CALLS ---
     fetchHomeDir();
     populateThemes();
-    showHiddenCheckbox.addEventListener('change', () => fetchAndRenderFiles(currentPath));
-    fetchAndRenderFiles();
     createTab(); // Create the first tab on load
 
     // SYSTEM STATS INTERVAL

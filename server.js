@@ -293,6 +293,40 @@ app.get('/download-zip', (req, res) => {
     archive.finalize();
 });
 
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+function renderFileListFragment({ currentPath, parentPath, entries }) {
+    const viewableExtensions = /\.(html|htm|png|jpg|jpeg|gif|svg|webp|pdf)$/i;
+    const editableExtensions = /\.(txt|js|json|md|css|sh|py|java|c|cpp|go|rs)$/i;
+
+    let html = '';
+    if (parentPath !== null) {
+        html += `<li class="directory" hx-get="/files" hx-vals='{"path": ${JSON.stringify(parentPath)}}' hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">&#128194; .. (Up)</li>`;
+    }
+
+    for (const entry of entries) {
+        const entryPath = `${currentPath}/${entry.name}`;
+        const icon = entry.type === 'directory' ? '&#128194;' : '&#128196;';
+        const escapedName = escapeHtml(entry.name);
+        const escapedPath = escapeHtml(entryPath);
+
+        if (entry.type === 'directory') {
+            html += `<li class="directory" data-path="${escapedPath}" data-type="directory" hx-get="/files" hx-vals='{"path": ${JSON.stringify(entryPath)}}' hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">${icon} ${escapedName}</li>`;
+        } else if (viewableExtensions.test(entry.name)) {
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" onclick="window.open('/view-file?path=' + encodeURIComponent('${escapedPath}'), '_blank')">${icon} ${escapedName}</li>`;
+        } else if (editableExtensions.test(entry.name)) {
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" onclick="window.open('editor.html?path=' + encodeURIComponent('${escapedPath}'), '_blank')">${icon} ${escapedName}</li>`;
+        } else {
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" style="cursor:default">${icon} ${escapedName}</li>`;
+        }
+    }
+    return html;
+}
+
 app.get('/files', (req, res) => {
     const requestedPath = req.query.path ? path.resolve(userHomeDir, req.query.path) : userHomeDir;
     const showHidden = req.query.showHidden === 'true';
@@ -322,14 +356,20 @@ app.get('/files', (req, res) => {
             const parentDir = path.dirname(path.relative(userHomeDir, requestedPath) || '.');
             const processedFiles = showHidden ? files : files.filter(file => !file.name.startsWith('.'));
             
-            res.json({
-                currentPath: path.relative(userHomeDir, requestedPath) || '.',
+            const relCurrentPath = path.relative(userHomeDir, requestedPath) || '.';
+            const data = {
+                currentPath: relCurrentPath,
                 parentPath: requestedPath === userHomeDir ? null : parentDir,
                 entries: processedFiles.sort((a, b) => {
                     if (a.type === b.type) return a.name.localeCompare(b.name);
                     return a.type === 'directory' ? -1 : 1;
                 })
-            });
+            };
+
+            const listHtml = renderFileListFragment(data);
+            const oob = `<span id="file-browser-header-text" hx-swap-oob="true">~/${escapeHtml(relCurrentPath)}</span>` +
+                        `<input type="hidden" id="current-path" hx-swap-oob="true" value="${escapeHtml(relCurrentPath)}">`;
+            res.set('Content-Type', 'text/html').send(listHtml + oob);
         }).catch(err => {
             console.error(err);
             res.status(500).send("Error reading file stats");
