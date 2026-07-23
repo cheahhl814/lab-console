@@ -44,22 +44,22 @@
                 </div>
             </div>
             
-            <div id="status-bar">
+            <div id="status-bar" hx-get="/system-stats" hx-trigger="load, every 5s" hx-swap="none">
                 <div class="stat" id="version-stat">
                     <span class="label">Version:</span>
-                    <span class="value"></span>
+                    <span class="value" id="version-stat-value"></span>
                 </div>
                 <div class="stat" id="cpu-stat">
                     <span class="label">CPU:</span>
-                    <span class="value">0%</span>
+                    <span class="value" id="cpu-stat-value">0%</span>
                 </div>
                 <div class="stat" id="ram-stat">
                     <span class="label">RAM:</span>
-                    <span class="value">0%</span>
+                    <span class="value" id="ram-stat-value">0%</span>
                 </div>
                 <div class="stat" id="gpu-stat">
                     <span class="label">GPU:</span>
-                    <span class="value">N/A</span>
+                    <span class="value" id="gpu-stat-value">N/A</span>
                 </div>
             </div>
             

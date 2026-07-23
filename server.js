@@ -400,19 +400,21 @@ app.get('/system-stats', async (req, res) => {
         const actualUsedMem = mem.total - mem.available;
         const actualUsedPercent = ((actualUsedMem / mem.total) * 100).toFixed(2);
 
-        res.json({
-            version: version,
-            cpu: {
-                load: cpu.currentLoad.toFixed(2)
-            },
-            mem: {
-                used: actualUsedMem,
-                total: mem.total,
-                percent: actualUsedPercent
-            },
-            gpu: simplifiedGpu,
-            squeue: [] // Keep this for now
-        });
+        const usedGb = (actualUsedMem / 1024 / 1024 / 1024).toFixed(2);
+        const totalGb = (mem.total / 1024 / 1024 / 1024).toFixed(2);
+        let gpuText = 'N/A';
+        if (simplifiedGpu.controllers.length > 0) {
+            const g = simplifiedGpu.controllers[0];
+            const vram = g.memoryTotal ? `(${(g.memoryUsed / g.memoryTotal * 100).toFixed(0)}%)` : '';
+            gpuText = `${g.model}: ${g.utilization || 0}% ${vram}`;
+        }
+
+        res.set('Content-Type', 'text/html').send(
+            `<span id="version-stat-value" hx-swap-oob="true">${version}</span>` +
+            `<span id="cpu-stat-value" hx-swap-oob="true">${cpu.currentLoad.toFixed(2)}%</span>` +
+            `<span id="ram-stat-value" hx-swap-oob="true">${usedGb}GB / ${totalGb}GB (${actualUsedPercent}%)</span>` +
+            `<span id="gpu-stat-value" hx-swap-oob="true">${gpuText}</span>`
+        );
     } catch (error) {
         console.error('Error fetching system stats:', error);
         res.status(500).json({ error: 'Failed to fetch system stats' });

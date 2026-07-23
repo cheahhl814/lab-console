@@ -28,11 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const terminalViews = document.getElementById('terminal-views');
     const showHiddenCheckbox = document.getElementById('show-hidden-checkbox');
 
-    const versionStatValue = document.querySelector('#version-stat .value');
-    const cpuStatValue = document.querySelector('#cpu-stat .value');
-    const ramStatValue = document.querySelector('#ram-stat .value');
-    const gpuStatValue = document.querySelector('#gpu-stat .value');
-
     // --- FUNCTION DEFINITIONS ---
 
     function populateThemes() {
@@ -197,36 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(error.message);
             console.error(`Error with ${endpoint}:`, error);
         });
-    }
-
-    // --- SYSTEM STATS FUNCTIONS ---
-    async function updateSystemStats() {
-        try {
-            const response = await fetch('/system-stats');
-            if (!response.ok) return;
-
-            const stats = await response.json();
-
-            versionStatValue.textContent = stats.version;
-            cpuStatValue.textContent = `${stats.cpu.load}%`;
-
-            // RAM
-            const usedGb = (stats.mem.used / 1024 / 1024 / 1024).toFixed(2);
-            const totalGb = (stats.mem.total / 1024 / 1024 / 1024).toFixed(2);
-            ramStatValue.textContent = `${usedGb}GB / ${totalGb}GB (${stats.mem.percent}%)`;
-
-            // GPU
-            if (stats.gpu && stats.gpu.controllers.length > 0) {
-                const gpu = stats.gpu.controllers[0];
-                const vram = gpu.memoryTotal ? `(${(gpu.memoryUsed / gpu.memoryTotal * 100).toFixed(0)}%)` : '';
-                gpuStatValue.textContent = `${gpu.model}: ${gpu.utilization || 0}% ${vram}`;
-            } else {
-                gpuStatValue.textContent = 'N/A';
-            }
-
-        } catch (error) {
-            console.error('Error fetching system stats:', error);
-        }
     }
 
 
@@ -476,10 +441,6 @@ document.addEventListener('DOMContentLoaded', () => {
     populateThemes();
     createTab(); // Create the first tab on load
 
-    // SYSTEM STATS INTERVAL
-    setInterval(updateSystemStats, 5000); // Update every 5 seconds
-    updateSystemStats(); // Initial call
-    
     // Split.js Initialization
     Split(['#file-browser', '#terminal-container'], {
         sizes: [20, 80],
