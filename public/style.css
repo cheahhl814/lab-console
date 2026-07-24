@@ -1,9 +1,70 @@
+:root,
+:root[data-theme="Default"] {
+    --color-bg: #1e1e1e;
+    --color-bg-panel: #252526;
+    --color-bg-panel-alt: #2d2d2d;
+    --color-bg-hover: #2a2d2e;
+    --color-bg-input: #3c3c3c;
+    --color-border: #333333;
+    --color-border-subtle: #2a2d2e;
+    --color-text: #d4d4d4;
+    --color-text-input: #f1f1f1;
+    --color-accent: #0e639c;
+    --color-accent-hover: #1c73b3;
+    --color-accent-border: #1c73b3;
+}
+
+:root[data-theme="Dracula"] {
+    --color-bg: #282a36;
+    --color-bg-panel: #21222c;
+    --color-bg-panel-alt: #343746;
+    --color-bg-hover: #44475a;
+    --color-bg-input: #343746;
+    --color-border: #191a21;
+    --color-border-subtle: #343746;
+    --color-text: #f8f8f2;
+    --color-text-input: #f8f8f2;
+    --color-accent: #bd93f9;
+    --color-accent-hover: #ff79c6;
+    --color-accent-border: #ff79c6;
+}
+
+:root[data-theme="Solarized Light"] {
+    --color-bg: #fdf6e3;
+    --color-bg-panel: #eee8d5;
+    --color-bg-panel-alt: #eee8d5;
+    --color-bg-hover: #e4ddc4;
+    --color-bg-input: #fdf6e3;
+    --color-border: #93a1a1;
+    --color-border-subtle: #d8d1b8;
+    --color-text: #657b83;
+    --color-text-input: #586e75;
+    --color-accent: #268bd2;
+    --color-accent-hover: #2aa198;
+    --color-accent-border: #2aa198;
+}
+
+:root[data-theme="Github"] {
+    --color-bg: #ffffff;
+    --color-bg-panel: #f6f8fa;
+    --color-bg-panel-alt: #f6f8fa;
+    --color-bg-hover: #eaeef2;
+    --color-bg-input: #ffffff;
+    --color-border: #d1d5da;
+    --color-border-subtle: #eaeef2;
+    --color-text: #24292e;
+    --color-text-input: #24292e;
+    --color-accent: #0366d6;
+    --color-accent-hover: #005cc5;
+    --color-accent-border: #005cc5;
+}
+
 body, html {
     margin: 0;
     padding: 0;
     height: 100%;
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    background-color: var(--color-bg);
+    color: var(--color-text);
     font-family: sans-serif;
     overflow: hidden; /* Prevent body scroll */
 }
@@ -15,7 +76,7 @@ body, html {
 }
 
 .gutter {
-    background-color: #333;
+    background-color: var(--color-border);
     background-repeat: no-repeat;
     background-position: 50%;
 }
@@ -26,7 +87,7 @@ body, html {
 
 #file-browser {
     height: 100%;
-    border-right: 1px solid #333;
+    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -35,13 +96,13 @@ body, html {
 #file-browser-header {
     padding: 10px;
     font-weight: bold;
-    background-color: #252526;
-    border-bottom: 1px solid #333;
+    background-color: var(--color-bg-panel);
+    border-bottom: 1px solid var(--color-border);
 }
 
 #file-browser-controls {
     padding: 10px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .button-group {
@@ -52,14 +113,14 @@ body, html {
 #upload-btn, #new-folder-btn {
     flex-grow: 1;
     padding: 8px;
-    background-color: #0e639c;
-    border: 1px solid #1c73b3;
+    background-color: var(--color-accent);
+    border: 1px solid var(--color-accent-border);
     color: #fff;
     cursor: pointer;
 }
 
 #upload-btn:hover, #new-folder-btn:hover {
-    background-color: #1c73b3;
+    background-color: var(--color-accent-hover);
 }
 
 .control-group {
@@ -74,9 +135,9 @@ body, html {
 #theme-select {
     width: 100%;
     padding: 8px;
-    background-color: #3c3c3c;
-    color: #f1f1f1;
-    border: 1px solid #555;
+    background-color: var(--color-bg-input);
+    color: var(--color-text-input);
+    border: 1px solid var(--color-border);
 }
 
 .hidden {
@@ -93,20 +154,20 @@ body, html {
 #file-list li {
     padding: 8px 12px;
     cursor: pointer;
-    border-bottom: 1px solid #2a2d2e;
+    border-bottom: 1px solid var(--color-border-subtle);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 #file-list li:hover {
-    background-color: #2a2d2e;
+    background-color: var(--color-bg-hover);
 }
 
 #context-menu {
     position: absolute;
-    background-color: #252526;
-    border: 1px solid #333;
+    background-color: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     padding: 5px 0;
     min-width: 150px;
@@ -122,7 +183,7 @@ body, html {
 }
 
 #context-menu div:hover {
-    background-color: #2a2d2e;
+    background-color: var(--color-bg-hover);
 }
 
 #file-list li.directory {
@@ -138,52 +199,52 @@ body, html {
 
 #tab-bar {
     display: flex;
-    background-color: #1e1e1e;
-    border-bottom: 1px solid #333;
+    background-color: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .tab {
-    background-color: #2d2d2d;
+    background-color: var(--color-bg-panel-alt);
     padding: 10px 15px;
     cursor: pointer;
-    border-right: 1px solid #1e1e1e;
+    border-right: 1px solid var(--color-bg);
     position: relative;
 }
 
 .tab.active {
-    background-color: #252526;
-    border-bottom: 1px solid #252526; /* Hide the parent border */
+    background-color: var(--color-bg-panel);
+    border-bottom: 1px solid var(--color-bg-panel); /* Hide the parent border */
     margin-bottom: -1px; /* Pull it down to cover the parent border */
 }
 
 .tab:hover {
-    background-color: #3a3a3a;
+    background-color: var(--color-bg-hover);
 }
 
 .close-tab-btn {
     margin-left: 10px;
     background: none;
     border: none;
-    color: #d4d4d4;
+    color: var(--color-text);
     cursor: pointer;
     padding: 0 5px;
 }
 
 .close-tab-btn:hover {
-    background-color: #555;
+    background-color: var(--color-bg-hover);
 }
 
 #new-tab-btn {
-    background-color: #2d2d2d;
+    background-color: var(--color-bg-panel-alt);
     border: none;
-    border-right: 1px solid #1e1e1e;
-    color: #d4d4d4;
+    border-right: 1px solid var(--color-bg);
+    color: var(--color-text);
     padding: 10px 15px;
     cursor: pointer;
 }
 
 #new-tab-btn:hover {
-    background-color: #3a3a3a;
+    background-color: var(--color-bg-hover);
 }
 
 #terminal-views {
@@ -204,8 +265,8 @@ body, html {
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: #252526;
-    border-top: 1px solid #333;
+    background-color: var(--color-bg-panel);
+    border-top: 1px solid var(--color-border);
     padding: 2px 10px;
     box-sizing: border-box;
     font-size: 12px;
@@ -232,12 +293,13 @@ body, html {
 }
 
 #file-list li.selected {
-    background-color: #0e639c;
+    background-color: var(--color-accent);
+    color: #fff;
 }
 
 /* New button style for status bar */
 .status-button {
-    background-color: #0e639c;
+    background-color: var(--color-accent);
     color: white;
     border: none;
     border-radius: 3px;
@@ -248,5 +310,5 @@ body, html {
 }
 
 .status-button:hover {
-    background-color: #1c73b3;
+    background-color: var(--color-accent-hover);
 }

@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
             option.textContent = themeName;
             themeSelect.appendChild(option);
         }
+        themeSelect.value = activeTheme;
+        document.documentElement.dataset.theme = activeTheme;
     }
 
     async function fetchHomeDir() {
@@ -199,8 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // THEME EVENT LISTENER
     themeSelect.addEventListener('change', () => {
         activeTheme = themeSelect.value;
+        document.documentElement.dataset.theme = activeTheme;
         const theme = themes[activeTheme];
-        tabs.forEach(tab => tab.term.setOption('theme', theme));
+        tabs.forEach(tab => tab.term.options.theme = theme);
     });
 
     // NEW FOLDER EVENT LISTENER
