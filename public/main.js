@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabBar = document.getElementById('tab-bar');
     const newTabBtn = document.getElementById('new-tab-btn');
     const terminalViews = document.getElementById('terminal-views');
-    const showHiddenCheckbox = document.getElementById('show-hidden-checkbox');
 
     // --- FUNCTION DEFINITIONS ---
 

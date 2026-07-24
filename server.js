@@ -53,6 +53,7 @@ fs.mkdir(fishConfigDir, { recursive: true }, (err) => {
 
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // htmx.ajax POSTs form-urlencoded bodies
 expressWs(app);
 
 // IMPORTANT: In a real application, use a more secure way to manage users and passwords.
