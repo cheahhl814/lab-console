@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DOM ELEMENTS ---
     const fileList = document.getElementById('file-list');
-    const fileBrowserHeader = document.getElementById('file-browser-header');
     const uploadBtn = document.getElementById('upload-btn');
     const newFolderBtn = document.getElementById('new-folder-btn');
     const fileInput = document.getElementById('file-input');
