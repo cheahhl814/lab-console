@@ -11,6 +11,15 @@ const si = require('systeminformation');
 
 const userHomeDir = os.homedir();
 
+// Real containment check: a raw path.startsWith(userHomeDir) is a substring test, so
+// "/home/user2" would incorrectly pass as being inside "/home/user". Compare via
+// path.relative instead and reject any escape (a relative path starting with "..").
+function isPathWithinHome(candidatePath) {
+    if (candidatePath === userHomeDir) return true;
+    const rel = path.relative(userHomeDir, candidatePath);
+    return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
 // --- HPC STATS COMMANDS CONFIGURATION ---
 // This command should show the status of the current user's jobs.
 const hpcCommands = {
@@ -56,10 +65,13 @@ app.use(express.json()); // Middleware to parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // htmx.ajax POSTs form-urlencoded bodies
 expressWs(app);
 
-// IMPORTANT: In a real application, use a more secure way to manage users and passwords.
-// Do not hardcode credentials directly in the code.
+if (!process.env.AUTH_USER || !process.env.AUTH_PASS) {
+    console.error('AUTH_USER and AUTH_PASS environment variables must be set. Refusing to start.');
+    process.exit(1);
+}
+
 app.use(basicAuth({
-    users: { 'mumgp': 'REDACTED' },
+    users: { [process.env.AUTH_USER]: process.env.AUTH_PASS },
     challenge: true,
     unauthorizedResponse: 'Unauthorized access.'
 }));
@@ -72,7 +84,7 @@ app.get('/api/home', (req, res) => {
 
 app.post('/create-file', (req, res) => {
     const fullPath = path.resolve(userHomeDir, req.body.path);
-    if (!fullPath.startsWith(userHomeDir)) return res.status(403).send('Forbidden');
+    if (!isPathWithinHome(fullPath)) return res.status(403).send('Forbidden');
     fs.writeFile(fullPath, '', (err) => {
         if (err) return res.status(500).send('Failed to create file.');
         res.set('HX-Trigger', 'file-list-changed').send('File created.');
@@ -81,7 +93,7 @@ app.post('/create-file', (req, res) => {
 
 app.post('/create-folder', (req, res) => {
     const fullPath = path.resolve(userHomeDir, req.body.path);
-    if (!fullPath.startsWith(userHomeDir)) return res.status(403).send('Forbidden');
+    if (!isPathWithinHome(fullPath)) return res.status(403).send('Forbidden');
     fs.mkdir(fullPath, { recursive: true }, (err) => {
         if (err) return res.status(500).send('Failed to create folder.');
         res.set('HX-Trigger', 'file-list-changed').send('Folder created.');
@@ -91,7 +103,7 @@ app.post('/create-folder', (req, res) => {
 app.post('/rename-item', (req, res) => {
     const oldPath = path.resolve(userHomeDir, req.body.oldPath);
     const newPath = path.resolve(userHomeDir, req.body.newPath);
-    if (!oldPath.startsWith(userHomeDir) || !newPath.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(oldPath) || !isPathWithinHome(newPath)) {
         return res.status(403).send('Forbidden');
     }
     fs.rename(oldPath, newPath, (err) => {
@@ -102,7 +114,7 @@ app.post('/rename-item', (req, res) => {
 
 app.post('/delete-item', (req, res) => {
     const fullPath = path.resolve(userHomeDir, req.body.path);
-    if (!fullPath.startsWith(userHomeDir) || fullPath === userHomeDir) {
+    if (!isPathWithinHome(fullPath) || fullPath === userHomeDir) {
         return res.status(403).send('Forbidden'); // Prevent deleting home dir
     }
     fs.rm(fullPath, { recursive: true, force: true }, (err) => {
@@ -139,7 +151,7 @@ app.post('/paste-item', (req, res) => {
     const sourcePath = path.resolve(userHomeDir, req.body.sourcePath);
     const destinationPath = path.resolve(userHomeDir, req.body.destinationPath);
 
-    if (!sourcePath.startsWith(userHomeDir) || !destinationPath.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(sourcePath) || !isPathWithinHome(destinationPath)) {
         return res.status(403).send('Forbidden');
     }
 
@@ -157,7 +169,7 @@ app.post('/move-item', (req, res) => {
     const sourcePath = path.resolve(userHomeDir, req.body.sourcePath);
     const destinationPath = path.resolve(userHomeDir, req.body.destinationPath);
 
-    if (!sourcePath.startsWith(userHomeDir) || !destinationPath.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(sourcePath) || !isPathWithinHome(destinationPath)) {
         return res.status(403).send('Forbidden');
     }
 
@@ -173,7 +185,7 @@ app.post('/move-item', (req, res) => {
 
 app.post('/duplicate-item', (req, res) => {
     const sourcePath = path.resolve(userHomeDir, req.body.sourcePath);
-    if (!sourcePath.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(sourcePath)) {
         return res.status(403).send('Forbidden');
     }
 
@@ -205,7 +217,7 @@ const upload = multer({ storage: storage });
 // --- EDITOR ENDPOINTS ---
 app.get('/get-content', (req, res) => {
     const fullPath = path.resolve(userHomeDir, req.query.path);
-    if (!fullPath.startsWith(userHomeDir)) return res.status(403).send('Forbidden');
+    if (!isPathWithinHome(fullPath)) return res.status(403).send('Forbidden');
     fs.readFile(fullPath, 'utf8', (err, data) => {
         if (err) return res.status(500).send('Failed to read file.');
         res.send(data);
@@ -214,7 +226,7 @@ app.get('/get-content', (req, res) => {
 
 app.post('/save-content', (req, res) => {
     const fullPath = path.resolve(userHomeDir, req.body.path);
-    if (!fullPath.startsWith(userHomeDir)) return res.status(403).send('Forbidden');
+    if (!isPathWithinHome(fullPath)) return res.status(403).send('Forbidden');
     fs.writeFile(fullPath, req.body.content, 'utf8', (err) => {
         if (err) return res.status(500).send('Failed to save file.');
         res.send('File saved successfully.');
@@ -226,7 +238,7 @@ app.post('/save-content', (req, res) => {
 
 app.get('/view-file', (req, res) => {
     const fullPath = path.resolve(userHomeDir, req.query.path);
-    if (!fullPath.startsWith(userHomeDir)) return res.status(403).send('Forbidden');
+    if (!isPathWithinHome(fullPath)) return res.status(403).send('Forbidden');
     res.sendFile(fullPath, (err) => {
         if (err) {
             res.status(err.status || 500).send('Could not send file.');
@@ -238,7 +250,7 @@ app.get('/view-file', (req, res) => {
 app.post('/upload', upload.any(), (req, res) => {
     const targetDestination = path.resolve(userHomeDir, req.body.destination || '.');
 
-    if (!targetDestination.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(targetDestination)) {
         return res.status(403).send('Forbidden: Target path is outside the home directory.');
     }
 
@@ -270,7 +282,7 @@ app.post('/upload', upload.any(), (req, res) => {
 // Endpoint for file downloads
 app.get('/download', (req, res) => {
     const requestedPath = path.resolve(userHomeDir, req.query.path);
-    if (!requestedPath.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(requestedPath)) {
         return res.status(403).send('Forbidden: Access denied.');
     }
     res.download(requestedPath);
@@ -279,7 +291,7 @@ app.get('/download', (req, res) => {
 // Endpoint for folder downloads (as ZIP)
 app.get('/download-zip', (req, res) => {
     const requestedPath = path.resolve(userHomeDir, req.query.path);
-    if (!requestedPath.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(requestedPath)) {
         return res.status(403).send('Forbidden: Access denied.');
     }
 
@@ -333,7 +345,7 @@ app.get('/files', (req, res) => {
     const showHidden = req.query.showHidden === 'true';
 
     // Security Check: Ensure the path is within the user's home directory
-    if (!requestedPath.startsWith(userHomeDir)) {
+    if (!isPathWithinHome(requestedPath)) {
         return res.status(403).send('Forbidden: Access denied.');
     }
 
@@ -456,17 +468,46 @@ app.ws('/ws', (ws, req) => {
     });
 });
 
-const port = 3000;
-app.listen(port, '0.0.0.0', () => {
+// Final error handler: catches anything thrown/passed to next() by routes above.
+// Must be registered last. Logs the real error server-side but never leaks stack
+// traces or file paths to the client.
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    if (res.headersSent) return next(err);
+    res.status(500).send('Internal server error.');
+});
+
+const port = process.env.PORT || 3000;
+
+function getLanAddress() {
     const interfaces = os.networkInterfaces();
-    let ipAddress = 'localhost';
     for (let iface in interfaces) {
         for (let alias of interfaces[iface]) {
             if (alias.family === 'IPv4' && !alias.internal) {
-                ipAddress = alias.address;
-                break;
+                return alias.address;
             }
         }
     }
-    console.log(`Server listening on http://${ipAddress}:${port}`);
-});
+    return 'localhost';
+}
+
+const { TLS_CERT_PATH, TLS_KEY_PATH } = process.env;
+if (TLS_CERT_PATH && TLS_KEY_PATH) {
+    const https = require('https');
+    const options = {
+        cert: fs.readFileSync(TLS_CERT_PATH),
+        key: fs.readFileSync(TLS_KEY_PATH)
+    };
+    https.createServer(options, app).listen(port, '0.0.0.0', () => {
+        console.log(`Server listening on https://${getLanAddress()}:${port}`);
+    });
+} else {
+    console.warn(
+        'WARNING: TLS_CERT_PATH/TLS_KEY_PATH not set — serving over plain HTTP. ' +
+        'Credentials and terminal traffic are unencrypted on the wire. ' +
+        'Set both env vars to enable HTTPS before exposing this beyond localhost/a trusted network.'
+    );
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`Server listening on http://${getLanAddress()}:${port}`);
+    });
+}
