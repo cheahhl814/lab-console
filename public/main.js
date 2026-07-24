@@ -173,12 +173,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UPLOAD LOGIC ---
     function handleFileSystemAction(endpoint, body) {
+        // htmx.ajax's promise only rejects on request-construction/network failures, not on
+        // HTTP error statuses (those instead fire htmx:responseError), so both must be handled
+        // here to surface server-side failures (e.g. 403/500) to the user.
+        const onResponseError = (event) => {
+            if (event.detail.pathInfo && event.detail.pathInfo.requestPath === endpoint) {
+                alert('Action failed: ' + (event.detail.xhr.responseText || event.detail.error));
+                document.body.removeEventListener('htmx:responseError', onResponseError);
+            }
+        };
+        document.body.addEventListener('htmx:responseError', onResponseError);
         htmx.ajax('POST', endpoint, {
             values: body,
             swap: 'none' // response has no target; HX-Trigger from the server refreshes #file-list
+        }).then(() => {
+            document.body.removeEventListener('htmx:responseError', onResponseError);
         }).catch(error => {
             alert('Action failed: ' + error);
             console.error(`Error with ${endpoint}:`, error);
+            document.body.removeEventListener('htmx:responseError', onResponseError);
         });
     }
 
