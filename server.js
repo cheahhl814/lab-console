@@ -8,6 +8,9 @@ const archiver = require('archiver');
 const multer = require('multer');
 const basicAuth = require('express-basic-auth');
 const si = require('systeminformation');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const logger = require('./logger');
 
 const userHomeDir = os.homedir();
 
@@ -32,7 +35,7 @@ const greetingSetting = '\nset -g -x fish_greeting ""\n';
 
 fs.mkdir(fishConfigDir, { recursive: true }, (err) => {
     if (err) {
-        console.error('Failed to create fish config directory:', err);
+        logger.error({ err }, 'Failed to create fish config directory');
         return;
     }
     fs.readFile(fishConfigFile, 'utf8', (err, data) => {
@@ -41,18 +44,18 @@ fs.mkdir(fishConfigDir, { recursive: true }, (err) => {
                 // File doesn't exist, create it
                 fs.writeFile(fishConfigFile, greetingSetting, (err) => {
                     if (err) {
-                        console.error('Failed to create fish config file:', err);
+                        logger.error({ err }, 'Failed to create fish config file');
                     }
                 });
             } else {
-                console.error('Failed to read fish config file:', err);
+                logger.error({ err }, 'Failed to read fish config file');
             }
         } else {
             // File exists, check if setting is already there
             if (!data.includes('fish_greeting')) {
                 fs.appendFile(fishConfigFile, greetingSetting, (err) => {
                     if (err) {
-                        console.error('Failed to write to fish config file:', err);
+                        logger.error({ err }, 'Failed to write to fish config file');
                     }
                 });
             }
@@ -61,14 +64,30 @@ fs.mkdir(fishConfigDir, { recursive: true }, (err) => {
 });
 
 const app = express();
+
+// contentSecurityPolicy is left off: htmx's hx-vals="js:...} evaluates expressions via
+// `new Function` (public/index.html), and Monaco (public/editor.js) relies on web
+// workers/blobs — a default CSP would break both. Other helmet protections (frame
+// options, no-sniff, HSTS when serving over HTTPS, etc.) stay enabled.
+app.use(helmet({ contentSecurityPolicy: false }));
+
 app.use(express.json()); // Middleware to parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // htmx.ajax POSTs form-urlencoded bodies
 expressWs(app);
 
 if (!process.env.AUTH_USER || !process.env.AUTH_PASS) {
-    console.error('AUTH_USER and AUTH_PASS environment variables must be set. Refusing to start.');
+    logger.error('AUTH_USER and AUTH_PASS environment variables must be set. Refusing to start.');
     process.exit(1);
 }
+
+// Applied before auth so it also mitigates basic-auth brute-forcing, not just mutation
+// spam. Generous enough for normal usage (status-bar polling is one request/5s).
+app.use(rateLimit({
+    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    limit: Number(process.env.RATE_LIMIT_MAX) || 300,
+    standardHeaders: true,
+    legacyHeaders: false
+}));
 
 app.use(basicAuth({
     users: { [process.env.AUTH_USER]: process.env.AUTH_PASS },
@@ -160,7 +179,7 @@ app.post('/paste-item', (req, res) => {
         copyRecursiveSync(sourcePath, destWithFilename);
         res.set('HX-Trigger', 'file-list-changed').send('Item pasted successfully.');
     } catch (error) {
-        console.error('Paste error:', error);
+        logger.error({ err: error }, 'Paste error');
         res.status(500).send('Failed to paste item.');
     }
 });
@@ -178,7 +197,7 @@ app.post('/move-item', (req, res) => {
         fs.renameSync(sourcePath, destWithFilename);
         res.set('HX-Trigger', 'file-list-changed').send('Item moved successfully.');
     } catch (error) {
-        console.error('Move error:', error);
+        logger.error({ err: error }, 'Move error');
         res.status(500).send('Failed to move item.');
     }
 });
@@ -194,7 +213,7 @@ app.post('/duplicate-item', (req, res) => {
         copyRecursiveSync(sourcePath, newPath);
         res.set('HX-Trigger', 'file-list-changed').send('Item duplicated successfully.');
     } catch (error) {
-        console.error('Duplicate error:', error);
+        logger.error({ err: error }, 'Duplicate error');
         res.status(500).send('Failed to duplicate item.');
     }
 });
@@ -211,7 +230,13 @@ const storage = multer.diskStorage({
         cb(null, file.originalname);
     }
 });
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: (Number(process.env.UPLOAD_MAX_FILE_SIZE_MB) || 200) * 1024 * 1024,
+        files: Number(process.env.UPLOAD_MAX_FILES) || 20
+    }
+});
 
 
 // --- EDITOR ENDPOINTS ---
@@ -265,7 +290,7 @@ app.post('/upload', upload.any(), (req, res) => {
                 fs.copyFileSync(tempPath, finalPath);
                 fs.unlinkSync(tempPath); // Delete the temporary file
             } catch (err) {
-                console.error('Error moving or deleting file:', err);
+                logger.error({ err }, 'Error moving or deleting file');
                 errors.push(`Failed to process file ${file.originalname}: ${err.message}`);
             }
         });
@@ -384,7 +409,7 @@ app.get('/files', (req, res) => {
                         `<input type="hidden" id="current-path" hx-swap-oob="true" value="${escapeHtml(relCurrentPath)}">`;
             res.set('Content-Type', 'text/html').send(listHtml + oob);
         }).catch(err => {
-            console.error(err);
+            logger.error({ err }, 'Error reading file stats');
             res.status(500).send("Error reading file stats");
         });
     });
@@ -429,7 +454,7 @@ app.get('/system-stats', async (req, res) => {
             `<span id="gpu-stat-value" hx-swap-oob="true">${gpuText}</span>`
         );
     } catch (error) {
-        console.error('Error fetching system stats:', error);
+        logger.error({ err: error }, 'Error fetching system stats');
         res.status(500).json({ error: 'Failed to fetch system stats' });
     }
 });
@@ -472,12 +497,14 @@ app.ws('/ws', (ws, req) => {
 // Must be registered last. Logs the real error server-side but never leaks stack
 // traces or file paths to the client.
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
     if (res.headersSent) return next(err);
+    if (err instanceof multer.MulterError) {
+        logger.warn({ err }, 'Upload rejected');
+        return res.status(413).send(`Upload rejected: ${err.message}`);
+    }
+    logger.error({ err }, 'Unhandled error');
     res.status(500).send('Internal server error.');
 });
-
-const port = process.env.PORT || 3000;
 
 function getLanAddress() {
     const interfaces = os.networkInterfaces();
@@ -491,23 +518,30 @@ function getLanAddress() {
     return 'localhost';
 }
 
-const { TLS_CERT_PATH, TLS_KEY_PATH } = process.env;
-if (TLS_CERT_PATH && TLS_KEY_PATH) {
-    const https = require('https');
-    const options = {
-        cert: fs.readFileSync(TLS_CERT_PATH),
-        key: fs.readFileSync(TLS_KEY_PATH)
-    };
-    https.createServer(options, app).listen(port, '0.0.0.0', () => {
-        console.log(`Server listening on https://${getLanAddress()}:${port}`);
-    });
-} else {
-    console.warn(
-        'WARNING: TLS_CERT_PATH/TLS_KEY_PATH not set — serving over plain HTTP. ' +
-        'Credentials and terminal traffic are unencrypted on the wire. ' +
-        'Set both env vars to enable HTTPS before exposing this beyond localhost/a trusted network.'
-    );
-    app.listen(port, '0.0.0.0', () => {
-        console.log(`Server listening on http://${getLanAddress()}:${port}`);
-    });
+// Only bind a real listener when run directly (`node server.js`), not when required
+// as a module (e.g. by tests using supertest against the exported app).
+if (require.main === module) {
+    const port = process.env.PORT || 3000;
+    const { TLS_CERT_PATH, TLS_KEY_PATH } = process.env;
+    if (TLS_CERT_PATH && TLS_KEY_PATH) {
+        const https = require('https');
+        const options = {
+            cert: fs.readFileSync(TLS_CERT_PATH),
+            key: fs.readFileSync(TLS_KEY_PATH)
+        };
+        https.createServer(options, app).listen(port, '0.0.0.0', () => {
+            logger.info(`Server listening on https://${getLanAddress()}:${port}`);
+        });
+    } else {
+        logger.warn(
+            'WARNING: TLS_CERT_PATH/TLS_KEY_PATH not set — serving over plain HTTP. ' +
+            'Credentials and terminal traffic are unencrypted on the wire. ' +
+            'Set both env vars to enable HTTPS before exposing this beyond localhost/a trusted network.'
+        );
+        app.listen(port, '0.0.0.0', () => {
+            logger.info(`Server listening on http://${getLanAddress()}:${port}`);
+        });
+    }
 }
+
+module.exports = app;

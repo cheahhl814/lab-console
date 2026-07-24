@@ -1,0 +1,26 @@
+# Template systemd unit for running this app under a process manager with
+# restart-on-crash. Copy to /etc/systemd/system/web-terminal.service, fill in the
+# placeholders, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now web-terminal
+#
+# Logs go to stdout/stderr as structured JSON (see logger.js) and land in the
+# systemd journal automatically — view with `journalctl -u web-terminal -f`.
+# journald already handles rotation/retention, so no separate log-rotation setup
+# is needed when running this way.
+
+[Unit]
+Description=web_terminal_v0.3
+After=network.target
+
+[Service]
+Type=simple
+User=REPLACE_WITH_RUN_AS_USER
+WorkingDirectory=/path/to/web_terminal_v0.3
+EnvironmentFile=/path/to/web_terminal_v0.3/.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
