@@ -66,4 +66,16 @@
   <symbol id="icon-terminal" viewBox="0 0 24 24">
     <path class="icon-stroke" d="M5 8 L10 12 L5 16 M13 16 H19" />
   </symbol>
+
+  <!-- back: left-arrow exiting through a browser-window outline (round corners, title bar) -->
+  <symbol id="icon-back" viewBox="0 0 24 24">
+    <rect class="icon-stroke" x="4" y="5" width="16" height="14" rx="2" />
+    <path class="icon-stroke" d="M4 9 H20" />
+    <path class="icon-stroke" d="M9 13 L6 16 L9 19 M6 16 H15" />
+  </symbol>
+
+  <!-- close-pane: >> chevrons (collapse the side panel) -->
+  <symbol id="icon-close-pane" viewBox="0 0 24 24">
+    <path class="icon-stroke" d="M8 6 L13 12 L8 18 M14 6 L19 12 L14 18" />
+  </symbol>
 </svg>

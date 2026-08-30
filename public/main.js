@@ -535,6 +535,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 terminal.style.width = '100%';
                 terminal.style.left = '0';
             }
+            // Terminal-only mode: hide file-browser-only toolbar controls (claude-htmx 2026-08-30).
+            ['home-btn', 'app-title', 'upload-btn', 'new-folder-btn', 'show-hidden-btn',
+             'view-mode-list', 'view-mode-grid', 'view-mode-details', 'terminal-menu-wrapper']
+                .forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+            // Show and wire the back-to-browser button (was hidden via .hidden class).
+            const backBtn = document.getElementById('back-to-browser-btn');
+            if (backBtn) {
+                backBtn.classList.remove('hidden');
+                backBtn.addEventListener('click', () => {
+                    window.location.href = window.location.pathname;
+                });
+            }
+            // ponytail: also rename the tab so multi-tab users can tell file-browser from terminal tabs.
+            document.title = 'Terminal — Web Terminal';
         }
 
         // Terminal menu dropdown — single button, two actions.
@@ -574,6 +591,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (terminal) terminal.classList.remove('open');
                 htmx.trigger('#file-list', 'file-list-changed');
             });
+        }
+
+        // Close-terminal button — slides the side panel back out (toggles the .open class).
+        const closeTerminalBtn = document.getElementById('close-terminal-btn');
+        if (closeTerminalBtn) {
+            closeTerminalBtn.addEventListener('click', toggleTerminal);
         }
 
         // View modes — actually re-render #file-list with the chosen view.

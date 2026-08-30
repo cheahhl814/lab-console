@@ -368,7 +368,7 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
                     : ` onclick="window.open('editor.html?path=' + encodeURIComponent('${escapedPath}'), '_blank')"`)
                 : '';
             html += `<li class="${entry.type}" ${navAttrs} data-path="${escapedPath}" data-type="${entry.type}" ${dataAction ? `data-action="${dataAction}"` : ''}${onClick}>`;
-            html += `<span class="col-name">${icon} ${escapedName}</span>`;
+            html += `<span class="col-name"><span class="file-icon">${icon}</span> <span class="file-name">${escapedName}</span></span>`;
             html += `<span class="col-size">${size}</span>`;
             html += `<span class="col-mtime">${mtime}</span>`;
             html += `<span class="col-type">${type}</span>`;
@@ -379,7 +379,7 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
 
     let html = '';
     if (parentPath !== null) {
-        html += `<li class="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">&#128194; .. (Up)</li>`;
+        html += `<li class="directory up" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"><span class="file-icon">&#128194;</span> <span class="file-name">.. (Up)</span></li>`;
     }
 
     for (const entry of entries) {
@@ -389,13 +389,13 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
         const escapedPath = escapeHtml(entryPath);
 
         if (entry.type === 'directory') {
-            html += `<li class="directory" data-path="${escapedPath}" data-type="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: entryPath, view }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">${icon} ${escapedName}</li>`;
+            html += `<li class="directory" data-path="${escapedPath}" data-type="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: entryPath, view }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"><span class="file-icon">${icon}</span> <span class="file-name">${escapedName}</span></li>`;
         } else if (viewableExtensions.test(entry.name)) {
-            html += `<li class="file" data-path="${escapedPath}" data-type="file" data-action="view">${icon} ${escapedName}</li>`;
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" data-action="view"><span class="file-icon">${icon}</span> <span class="file-name">${escapedName}</span></li>`;
         } else if (editableExtensions.test(entry.name)) {
-            html += `<li class="file" data-path="${escapedPath}" data-type="file" data-action="edit">${icon} ${escapedName}</li>`;
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" data-action="edit"><span class="file-icon">${icon}</span> <span class="file-name">${escapedName}</span></li>`;
         } else {
-            html += `<li class="file" data-path="${escapedPath}" data-type="file" style="cursor:default">${icon} ${escapedName}</li>`;
+            html += `<li class="file" data-path="${escapedPath}" data-type="file" style="cursor:default"><span class="file-icon">${icon}</span> <span class="file-name">${escapedName}</span></li>`;
         }
     }
     return html;

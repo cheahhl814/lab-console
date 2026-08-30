@@ -58,6 +58,11 @@
                         <div class="menu-item" data-terminal-action="new-tab">New Browser Tab</div>
                     </div>
                 </div>
+
+                <!-- Back to file browser button — visible only in terminal-only mode. -->
+                <button id="back-to-browser-btn" class="icon-btn hidden" title="Back to File Browser" aria-label="Back to file browser">
+                    <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-back"/></svg>
+                </button>
             </div>
         </div>
 
@@ -81,6 +86,10 @@
                         <button id="new-tab-btn">+</button>
                     </div>
                     <div id="terminal-views"></div>
+                    <!-- Close button anchored inside the terminal panel — slides it back out. -->
+                    <button id="close-terminal-btn" class="icon-btn" title="Hide terminal panel" aria-label="Hide terminal panel">
+                        <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-close-pane"/></svg>
+                    </button>
                 </div>
             </section>
         </div>
