@@ -19,24 +19,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadBtn = document.getElementById('upload-btn');
     const newFolderBtn = document.getElementById('new-folder-btn');
     const fileInput = document.getElementById('file-input');
-    const themeSelect = document.getElementById('theme-select');
     const contextMenu = document.getElementById('context-menu');
     const contextMenuItemDownload = document.getElementById('context-menu-item-download');
     const tabBar = document.getElementById('tab-bar');
     const newTabBtn = document.getElementById('new-tab-btn');
     const terminalViews = document.getElementById('terminal-views');
+    // ponytail: theme-select <select> replaced by a button + dropdown menu (Phase 0.1 polish).
+    const themeMenuBtn = document.getElementById('theme-menu-btn');
+    const themeMenu = document.getElementById('theme-menu');
+    // Show hidden button (replaces the legacy checkbox).
+    const showHiddenBtn = document.getElementById('show-hidden-btn');
+    // Terminal open modes — side panel and new tab.
+    const openTerminalTabBtn = document.getElementById('open-terminal-tab-btn');
 
     // --- FUNCTION DEFINITIONS ---
 
     function populateThemes() {
+        // Build the dropdown menu items. themeMenuBtn click toggles visibility.
+        if (!themeMenu) return;
+        themeMenu.innerHTML = '';
         for (const themeName in themes) {
-            const option = document.createElement('option');
-            option.value = themeName;
-            option.textContent = themeName;
-            themeSelect.appendChild(option);
+            const item = document.createElement('div');
+            item.className = 'theme-menu-item';
+            item.dataset.theme = themeName;
+            item.textContent = themeName;
+            if (themeName === activeTheme) item.classList.add('active');
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setActiveTheme(themeName);
+                themeMenu.classList.add('hidden');
+                themeMenuBtn.setAttribute('aria-expanded', 'false');
+            });
+            themeMenu.appendChild(item);
         }
-        themeSelect.value = activeTheme;
+        // Toggle menu on button click.
+        themeMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = themeMenu.classList.toggle('hidden');
+            themeMenuBtn.setAttribute('aria-expanded', String(!isHidden));
+        });
+        // Click-outside closes the menu.
+        document.addEventListener('click', () => {
+            themeMenu.classList.add('hidden');
+            themeMenuBtn.setAttribute('aria-expanded', 'false');
+        });
         document.documentElement.dataset.theme = activeTheme;
+    }
+
+    function setActiveTheme(themeName) {
+        activeTheme = themeName;
+        document.documentElement.dataset.theme = activeTheme;
+        const theme = themes[activeTheme];
+        tabs.forEach(tab => tab.term.options.theme = theme);
+        // Refresh .active marker on menu items.
+        if (themeMenu) {
+            themeMenu.querySelectorAll('.theme-menu-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.theme === themeName);
+            });
+        }
     }
 
     async function fetchHomeDir() {
@@ -198,13 +238,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT LISTENERS ---
 
-    // THEME EVENT LISTENER
-    themeSelect.addEventListener('change', () => {
-        activeTheme = themeSelect.value;
-        document.documentElement.dataset.theme = activeTheme;
-        const theme = themes[activeTheme];
-        tabs.forEach(tab => tab.term.options.theme = theme);
-    });
+    // THEME LISTENER
+    // ponytail: theme is now set via menu item click in populateThemes() (setActiveTheme).
+
+    // SHOW HIDDEN toggle — button replaces the legacy checkbox.
+    // The legacy /files route reads req.query.showHidden === 'true'. We synthesize a hidden
+    // input #show-hidden-checkbox so htmx's hx-include picks it up, and flip its value before
+    // each htmx trigger.
+    let showHidden = false;
+    (function ensureShowHiddenCheckbox() {
+        let cb = document.getElementById('show-hidden-checkbox');
+        if (cb) return;
+        cb = document.createElement('input');
+        cb.type = 'hidden';
+        cb.id = 'show-hidden-checkbox';
+        cb.name = 'showHidden';
+        cb.value = 'false';
+        document.body.appendChild(cb);
+    })();
+    function syncShowHiddenCheckbox() {
+        const cb = document.getElementById('show-hidden-checkbox');
+        if (cb) cb.value = showHidden ? 'true' : 'false';
+    }
+    if (showHiddenBtn) {
+        showHiddenBtn.addEventListener('click', () => {
+            showHidden = !showHidden;
+            showHiddenBtn.setAttribute('aria-pressed', String(showHidden));
+            syncShowHiddenCheckbox();
+            htmx.trigger('#file-list', 'file-list-changed');
+        });
+    }
 
     // NEW FOLDER EVENT LISTENER
     newFolderBtn.addEventListener('click', () => {
@@ -458,18 +521,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const toggleBtn = document.getElementById('toggle-terminal-btn');
         if (toggleBtn) toggleBtn.addEventListener('click', toggleTerminal);
 
-        // Phase 0.2 stub: view-mode buttons just toggle the .active class for now.
-        // The actual view-mode rendering lands in Phase 0.2.
-        document.querySelectorAll('.view-mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const view = btn.dataset.view;
-                // Persist the user's choice in localStorage so Phase 0.2 can read it.
-                try { localStorage.setItem('web-terminal:view-mode', view); } catch (_) { /* ignore */ }
-                // No-op visual stub: the file-list will re-render in Phase 0.2 via htmx trigger.
+        // Terminal open in new browser tab.
+        // ponytail: window.open() to the same page; the new tab loads the same SPA but without
+        // a file browser — terminal panel is force-opened by setting ?terminal=open (Phase 0.4).
+        // For now, just open the same page; user can toggle terminal in the new tab.
+        const openTabBtn = document.getElementById('open-terminal-tab-btn');
+        if (openTabBtn) {
+            openTabBtn.addEventListener('click', () => {
+                window.open(window.location.pathname, '_blank');
             });
+        }
+
+        // View modes — actually re-render #file-list with the chosen view.
+        // The /files route accepts view=list|grid|details. htmx triggers a fresh fetch
+        // with the new view param via a per-button hx-vals override on the hx-trigger.
+        function setViewMode(view) {
+            window.__fileListView = view;
+            try { localStorage.setItem('web-terminal:view-mode', view); } catch (_) { /* ignore */ }
+            document.querySelectorAll('.view-mode-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.view === view);
+            });
+            // Toggle the CSS view class so grid styling kicks in even before server returns.
+            if (fileList) {
+                fileList.classList.remove('view-list', 'view-grid', 'view-details');
+                fileList.classList.add('view-' + view);
+            }
+            htmx.trigger('#file-list', 'file-list-changed');
+        }
+        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => setViewMode(btn.dataset.view));
         });
+        // Restore last view mode from localStorage.
+        try {
+            const savedView = localStorage.getItem('web-terminal:view-mode');
+            if (savedView && ['list', 'grid', 'details'].includes(savedView)) {
+                window.__fileListView = savedView;
+                document.querySelectorAll('.view-mode-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.view === savedView);
+                });
+                if (fileList) {
+                    fileList.classList.add('view-' + savedView);
+                }
+            } else {
+                window.__fileListView = 'list';
+            }
+        } catch (_) { window.__fileListView = 'list'; }
     }
 
     // --- INITIALIZATION CALLS ---

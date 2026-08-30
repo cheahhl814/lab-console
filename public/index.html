@@ -11,41 +11,44 @@
         <!-- App toolbar (replaces file-browser-header as global chrome) -->
         <div id="app-toolbar">
             <div id="app-toolbar-left">
-                <span id="app-title">Web Terminal</span>
+                <!-- Breadcrumb replaces the static 'Web Terminal' title.
+                     The text is updated by the /files OOB span just like the legacy header. -->
+                <span id="app-title">File Browser: <span id="file-browser-header-text">~/.</span></span>
             </div>
             <div id="app-toolbar-center">
-                <button id="view-mode-list"   class="view-mode-btn active" data-view="list"   title="List view">&#9776;</button>
-                <button id="view-mode-grid"   class="view-mode-btn"         data-view="grid"   title="Grid view">&#9638;</button>
-                <button id="view-mode-details" class="view-mode-btn"        data-view="details" title="Details view">&#9783;</button>
+                <!-- File actions — icon-only with title=tooltip for hover discoverability -->
+                <button id="upload-btn"        class="icon-btn" title="Upload File">&#x1F4E4;</button>
+                <button id="new-folder-btn"    class="icon-btn" title="New Folder">&#x1F4C1;+</button>
+                <input type="file" id="file-input" class="hidden" multiple />
+
+                <!-- View modes -->
+                <button id="view-mode-list"    class="view-mode-btn active" data-view="list"    title="List view">&#9776;</button>
+                <button id="view-mode-grid"    class="view-mode-btn"         data-view="grid"    title="Grid view">&#9638;</button>
+                <button id="view-mode-details" class="view-mode-btn"         data-view="details" title="Details view">&#9783;</button>
+
+                <!-- Show hidden files — icon-only toggle -->
+                <button id="show-hidden-btn" class="icon-btn" title="Show Hidden Files" aria-pressed="false">&#x1F441;&#xFE0F;</button>
             </div>
             <div id="app-toolbar-right">
-                <select id="theme-select"></select>
-                <button id="toggle-terminal-btn" title="Toggle terminal panel">&#x1F5B6; Terminal</button>
+                <!-- Theme picker — button that opens a dropdown menu on click (replaces <select>) -->
+                <div id="theme-menu-wrapper">
+                    <button id="theme-menu-btn" class="icon-btn" title="Theme" aria-haspopup="true" aria-expanded="false">&#x1F3A8;</button>
+                    <div id="theme-menu" class="hidden" role="menu"></div>
+                </div>
+
+                <!-- Terminal open modes — side panel (overlay) or new browser tab -->
+                <button id="toggle-terminal-btn" class="icon-btn" title="Open terminal as side panel">&#x3E;&#x5F;</button>
+                <button id="open-terminal-tab-btn" class="icon-btn" title="Open terminal in new browser tab">&#x1F310;</button>
             </div>
         </div>
 
         <div id="surface-area">
             <section class="surface" id="file-browser-surface" data-surface="files">
                 <div id="file-browser">
-                    <div id="file-browser-header">File Browser: <span id="file-browser-header-text">~/.</span></div>
                     <input type="hidden" id="current-path" value=".">
-                <div id="file-browser-controls">
-                    <div class="button-group">
-                        <button id="upload-btn">Upload File</button>
-                        <button id="new-folder-btn">New Folder</button>
-                    </div>
-                    <input type="file" id="file-input" class="hidden" multiple />
-                    <div class="control-group">
-                        <input type="checkbox" id="show-hidden-checkbox" name="showHidden" value="true"
-                               hx-get="/files" hx-target="#file-list" hx-swap="innerHTML"
-                               hx-vals="js:{path: document.getElementById('current-path').value}"
-                               hx-trigger="change" />
-                        <label for="show-hidden-checkbox">Show Hidden Files</label>
-                    </div>
-                </div>
                 <ul id="file-list"
                     hx-get="/files"
-                    hx-vals="js:{path: document.getElementById('current-path').value}"
+                    hx-vals="js:{path: document.getElementById('current-path').value, view: window.__fileListView || 'list'}"
                     hx-trigger="load, file-list-changed from:body"
                     hx-include="#show-hidden-checkbox"
                     hx-swap="innerHTML"></ul>

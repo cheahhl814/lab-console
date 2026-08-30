@@ -337,13 +337,52 @@ function escapeHtml(s) {
     }[c]));
 }
 
-function renderFileListFragment({ currentPath, parentPath, entries }) {
+function renderFileListFragment({ currentPath, parentPath, entries }, view = 'list') {
     const viewableExtensions = /\.(html|htm|png|jpg|jpeg|gif|svg|webp|pdf)$/i;
     const editableExtensions = /\.(txt|js|json|md|css|sh|py|java|c|cpp|go|rs)$/i;
 
+    // ponytail: details view uses <table>; list/grid both use <ul> (CSS switches grid layout).
+    if (view === 'details') {
+        let html = '<table class="details-view"><thead><tr>';
+        html += '<th class="col-name">Name</th><th class="col-size">Size</th><th class="col-mtime">Modified</th><th class="col-type">Type</th>';
+        html += '</tr></thead><tbody>';
+        if (parentPath !== null) {
+            const upAttrs = `hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view: 'details' }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"`;
+            html += `<tr class="directory" ${upAttrs}><td colspan="4">&#128194; .. (Up)</td></tr>`;
+        }
+        for (const entry of entries) {
+            const entryPath = `${currentPath}/${entry.name}`;
+            const escapedName = escapeHtml(entry.name);
+            const escapedPath = escapeHtml(entryPath);
+            const icon = entry.type === 'directory' ? '&#128194;' : '&#128196;';
+            const size = entry.size == null ? '\u2014' : humanSize(entry.size);
+            const mtime = entry.mtime ? entry.mtime.slice(0, 10) : '\u2014'; // YYYY-MM-DD
+            const type = entry.type === 'directory' ? 'Folder' : 'File';
+            const navAttrs = entry.type === 'directory'
+                ? `hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: entryPath, view: 'details' }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"`
+                : '';
+            const dataAction = entry.type === 'directory' ? '' :
+                (viewableExtensions.test(entry.name) ? 'view' : editableExtensions.test(entry.name) ? 'edit' : '');
+            const onClick = !navAttrs && dataAction
+                ? (dataAction === 'view'
+                    ? ` onclick="window.open('/view-file?path=' + encodeURIComponent('${escapedPath}'), '_blank')"`
+                    : ` onclick="window.open('editor.html?path=' + encodeURIComponent('${escapedPath}'), '_blank')"`)
+                : '';
+            const rowClass = entry.type === 'directory' ? 'directory' : 'file';
+            html += `<tr class="${rowClass}" ${navAttrs} data-path="${escapedPath}" data-type="${entry.type}" ${dataAction ? `data-action="${dataAction}"` : ''}${onClick}>`;
+            html += `<td class="col-name">${icon} ${escapedName}</td>`;
+            html += `<td class="col-size">${size}</td>`;
+            html += `<td class="col-mtime">${mtime}</td>`;
+            html += `<td class="col-type">${type}</td>`;
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        return html;
+    }
+
     let html = '';
     if (parentPath !== null) {
-        html += `<li class="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">&#128194; .. (Up)</li>`;
+        html += `<li class="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">&#128194; .. (Up)</li>`;
     }
 
     for (const entry of entries) {
@@ -353,7 +392,7 @@ function renderFileListFragment({ currentPath, parentPath, entries }) {
         const escapedPath = escapeHtml(entryPath);
 
         if (entry.type === 'directory') {
-            html += `<li class="directory" data-path="${escapedPath}" data-type="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: entryPath }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">${icon} ${escapedName}</li>`;
+            html += `<li class="directory" data-path="${escapedPath}" data-type="directory" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: entryPath, view }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox">${icon} ${escapedName}</li>`;
         } else if (viewableExtensions.test(entry.name)) {
             html += `<li class="file" data-path="${escapedPath}" data-type="file" data-action="view">${icon} ${escapedName}</li>`;
         } else if (editableExtensions.test(entry.name)) {
@@ -365,9 +404,23 @@ function renderFileListFragment({ currentPath, parentPath, entries }) {
     return html;
 }
 
+// ponytail: human-readable size for details view. Bytes, KB, MB, GB.
+function humanSize(bytes) {
+    if (bytes == null) return '\u2014';
+    if (bytes < 1024) return bytes + ' B';
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let val = bytes / 1024;
+    for (const unit of units) {
+        if (val < 1024) return val.toFixed(1) + ' ' + unit;
+        val /= 1024;
+    }
+    return val.toFixed(1) + ' PB';
+}
+
 app.get('/files', (req, res) => {
     const requestedPath = req.query.path ? path.resolve(userHomeDir, req.query.path) : userHomeDir;
     const showHidden = req.query.showHidden === 'true';
+    const view = ['list', 'grid', 'details'].includes(req.query.view) ? req.query.view : 'list';
 
     // Security Check: Ensure the path is within the user's home directory
     if (!isPathWithinHome(requestedPath)) {
@@ -382,10 +435,18 @@ app.get('/files', (req, res) => {
         const promises = entries.map(entry => {
             return new Promise((resolve) => {
                 const fullPath = path.join(requestedPath, entry.name);
+                // ponytail: parallel stats (Promise.all over fs.readdir) — claude-htmx review 2026-08-30.
                 fs.stat(fullPath, (statErr, stats) => {
                     // If stat fails, it might be a broken symlink, so we treat it as a file.
                     const type = (!statErr && stats.isDirectory()) ? 'directory' : 'file';
-                    resolve({ name: entry.name, type: type });
+                    // ponytail: enrich processedFiles with size + mtime for details/grid views.
+                    // Only included for views that need them; list view ignores them.
+                    resolve({
+                        name: entry.name,
+                        type: type,
+                        size: statErr ? null : stats.size,
+                        mtime: statErr ? null : stats.mtime.toISOString()
+                    });
                 });
             });
         });
@@ -393,7 +454,7 @@ app.get('/files', (req, res) => {
         Promise.all(promises).then(files => {
             const parentDir = path.dirname(path.relative(userHomeDir, requestedPath) || '.');
             const processedFiles = showHidden ? files : files.filter(file => !file.name.startsWith('.'));
-            
+
             const relCurrentPath = path.relative(userHomeDir, requestedPath) || '.';
             const data = {
                 currentPath: relCurrentPath,
@@ -404,7 +465,7 @@ app.get('/files', (req, res) => {
                 })
             };
 
-            const listHtml = renderFileListFragment(data);
+            const listHtml = renderFileListFragment(data, view);
             const oob = `<span id="file-browser-header-text" hx-swap-oob="true">~/${escapeHtml(relCurrentPath)}</span>` +
                         `<input type="hidden" id="current-path" hx-swap-oob="true" value="${escapeHtml(relCurrentPath)}">`;
             res.set('Content-Type', 'text/html').send(listHtml + oob);

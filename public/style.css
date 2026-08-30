@@ -131,6 +131,70 @@ body, html {
     background-color: var(--color-accent-hover);
 }
 
+/* ponytail: icon-only buttons share one style. title attribute provides hover label. */
+.icon-btn {
+    background-color: var(--color-bg-panel-alt);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1;
+    min-width: 28px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.icon-btn[aria-pressed="true"] {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent-border);
+    color: #fff;
+}
+
+/* Theme dropdown menu — replaces the legacy <select>. */
+#theme-menu-wrapper {
+    position: relative;
+}
+
+#theme-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background-color: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    min-width: 150px;
+    z-index: 100;
+    padding: 4px 0;
+    border-radius: 3px;
+}
+
+#theme-menu.hidden {
+    display: none;
+}
+
+#theme-menu .theme-menu-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--color-text);
+}
+
+#theme-menu .theme-menu-item:hover {
+    background-color: var(--color-bg-hover);
+}
+
+#theme-menu .theme-menu-item.active {
+    background-color: var(--color-accent);
+    color: #fff;
+}
+
 /* Surface area holds peer surfaces (files + terminal). */
 #surface-area {
     flex-grow: 1;
@@ -234,6 +298,61 @@ body, html {
     padding: 0;
     margin: 0;
     padding-bottom: 50px; /* Add some space at the bottom */
+}
+
+/* ponytail: grid view — same <ul>, CSS-only layout via container query-ish flex grid. */
+#file-list.view-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    padding: 12px;
+}
+
+#file-list.view-grid li {
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 4px;
+    padding: 12px 8px;
+    text-align: center;
+    white-space: normal;
+    word-break: break-all;
+}
+
+#file-list.view-details {
+    padding: 0;
+}
+
+table.details-view {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+table.details-view thead th {
+    text-align: left;
+    padding: 6px 12px;
+    background-color: var(--color-bg-panel);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+}
+
+table.details-view tbody td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+table.details-view tbody tr:hover {
+    background-color: var(--color-bg-hover);
+}
+
+table.details-view td.col-size, table.details-view td.col-mtime, table.details-view td.col-type {
+    color: var(--color-text);
+    font-family: monospace;
 }
 
 #file-list li {
