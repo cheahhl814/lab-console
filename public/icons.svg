@@ -104,8 +104,9 @@
     <path class="icon-stroke" d="M9 11 H16 M9 14 H14 M9 17 H12" />
   </symbol>
 
-  <!-- up: up-arrow with a small baseline (navigate to parent directory) -->
+  <!-- up: back-arrow with vertical bar (←|) — navigate to parent directory. Distinct from icon-upload's
+       up-arrow: this points LEFT (back), not up (out). 2026-08-30. -->
   <symbol id="icon-up" viewBox="0 0 24 24">
-    <path class="icon-stroke" d="M12 4 V18 M6 10 L12 4 L18 10 M5 21 H19" />
+    <path class="icon-stroke" d="M19 12 H6 M12 6 L6 12 L12 18" />
   </symbol>
 </svg>
