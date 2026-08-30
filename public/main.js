@@ -29,8 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeMenu = document.getElementById('theme-menu');
     // Show hidden button (replaces the legacy checkbox).
     const showHiddenBtn = document.getElementById('show-hidden-btn');
-    // Terminal open modes — side panel and new tab.
-    const openTerminalTabBtn = document.getElementById('open-terminal-tab-btn');
+    // Terminal open modes — side panel and new tab (merged into one dropdown).
+    const terminalMenuBtn = document.getElementById('terminal-menu-btn');
+    const terminalMenu = document.getElementById('terminal-menu');
+    // Home button — jumps to home dir.
+    const homeBtn = document.getElementById('home-btn');
 
     // --- FUNCTION DEFINITIONS ---
 
@@ -325,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         contextMenu.classList.add('hidden'); // Hide first
 
-        const targetLi = e.target.closest('li');
+        const targetLi = e.target.closest('li, tr[data-path]');
 
         // Show/hide menu items based on context
         if (targetLi && !targetLi.textContent.includes('.. (Up)')) {
@@ -486,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     fileList.addEventListener('click', (e) => {
-        const targetLi = e.target.closest('li');
+        const targetLi = e.target.closest('li, tr[data-path]');
         if (targetLi) {
             fileList.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
             targetLi.classList.add('selected');
@@ -518,17 +521,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initOverlayLayout() {
-        const toggleBtn = document.getElementById('toggle-terminal-btn');
-        if (toggleBtn) toggleBtn.addEventListener('click', toggleTerminal);
+        // Terminal menu dropdown — single button, two actions.
+        if (terminalMenuBtn && terminalMenu) {
+            terminalMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = terminalMenu.classList.toggle('hidden');
+                terminalMenuBtn.setAttribute('aria-expanded', String(!isHidden));
+            });
+            terminalMenu.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = item.dataset.terminalAction;
+                    if (action === 'side-panel') {
+                        toggleTerminal();
+                    } else if (action === 'new-tab') {
+                        window.open(window.location.pathname, '_blank');
+                    }
+                    terminalMenu.classList.add('hidden');
+                    terminalMenuBtn.setAttribute('aria-expanded', 'false');
+                });
+            });
+            // Click-outside closes.
+            document.addEventListener('click', () => {
+                terminalMenu.classList.add('hidden');
+                terminalMenuBtn.setAttribute('aria-expanded', 'false');
+            });
+        }
 
-        // Terminal open in new browser tab.
-        // ponytail: window.open() to the same page; the new tab loads the same SPA but without
-        // a file browser — terminal panel is force-opened by setting ?terminal=open (Phase 0.4).
-        // For now, just open the same page; user can toggle terminal in the new tab.
-        const openTabBtn = document.getElementById('open-terminal-tab-btn');
-        if (openTabBtn) {
-            openTabBtn.addEventListener('click', () => {
-                window.open(window.location.pathname, '_blank');
+        // Home button — navigate to ~/ and close terminal panel.
+        if (homeBtn) {
+            homeBtn.addEventListener('click', () => {
+                document.getElementById('current-path').value = '.';
+                const terminal = document.getElementById('terminal-surface');
+                if (terminal) terminal.classList.remove('open');
+                htmx.trigger('#file-list', 'file-list-changed');
             });
         }
 

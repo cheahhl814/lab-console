@@ -341,14 +341,13 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
     const viewableExtensions = /\.(html|htm|png|jpg|jpeg|gif|svg|webp|pdf)$/i;
     const editableExtensions = /\.(txt|js|json|md|css|sh|py|java|c|cpp|go|rs)$/i;
 
-    // ponytail: details view uses <table>; list/grid both use <ul> (CSS switches grid layout).
+    // ponytail: details view uses the SAME <li> markup as list/grid. CSS Grid columns
+    // lay out size/mtime/type. No <table> inside <ul> (invalid HTML; browsers auto-close
+    // the <ul> before the <table>, breaking the .view-details CSS target).
     if (view === 'details') {
-        let html = '<table class="details-view"><thead><tr>';
-        html += '<th class="col-name">Name</th><th class="col-size">Size</th><th class="col-mtime">Modified</th><th class="col-type">Type</th>';
-        html += '</tr></thead><tbody>';
+        let html = '';
         if (parentPath !== null) {
-            const upAttrs = `hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view: 'details' }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"`;
-            html += `<tr class="directory" ${upAttrs}><td colspan="4">&#128194; .. (Up)</td></tr>`;
+            html += `<li class="directory up" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view: 'details' }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"><span class="col-name">&#128194; .. (Up)</span></li>`;
         }
         for (const entry of entries) {
             const entryPath = `${currentPath}/${entry.name}`;
@@ -356,7 +355,7 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
             const escapedPath = escapeHtml(entryPath);
             const icon = entry.type === 'directory' ? '&#128194;' : '&#128196;';
             const size = entry.size == null ? '\u2014' : humanSize(entry.size);
-            const mtime = entry.mtime ? entry.mtime.slice(0, 10) : '\u2014'; // YYYY-MM-DD
+            const mtime = entry.mtime ? entry.mtime.slice(0, 10) : '\u2014';
             const type = entry.type === 'directory' ? 'Folder' : 'File';
             const navAttrs = entry.type === 'directory'
                 ? `hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: entryPath, view: 'details' }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"`
@@ -368,15 +367,13 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
                     ? ` onclick="window.open('/view-file?path=' + encodeURIComponent('${escapedPath}'), '_blank')"`
                     : ` onclick="window.open('editor.html?path=' + encodeURIComponent('${escapedPath}'), '_blank')"`)
                 : '';
-            const rowClass = entry.type === 'directory' ? 'directory' : 'file';
-            html += `<tr class="${rowClass}" ${navAttrs} data-path="${escapedPath}" data-type="${entry.type}" ${dataAction ? `data-action="${dataAction}"` : ''}${onClick}>`;
-            html += `<td class="col-name">${icon} ${escapedName}</td>`;
-            html += `<td class="col-size">${size}</td>`;
-            html += `<td class="col-mtime">${mtime}</td>`;
-            html += `<td class="col-type">${type}</td>`;
-            html += '</tr>';
+            html += `<li class="${entry.type}" ${navAttrs} data-path="${escapedPath}" data-type="${entry.type}" ${dataAction ? `data-action="${dataAction}"` : ''}${onClick}>`;
+            html += `<span class="col-name">${icon} ${escapedName}</span>`;
+            html += `<span class="col-size">${size}</span>`;
+            html += `<span class="col-mtime">${mtime}</span>`;
+            html += `<span class="col-type">${type}</span>`;
+            html += '</li>';
         }
-        html += '</tbody></table>';
         return html;
     }
 

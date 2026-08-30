@@ -11,34 +11,41 @@
         <!-- App toolbar (replaces file-browser-header as global chrome) -->
         <div id="app-toolbar">
             <div id="app-toolbar-left">
+                <button id="home-btn" class="icon-btn" title="Home (~/)">&#x1F3E0;</button>
                 <!-- Breadcrumb replaces the static 'Web Terminal' title.
                      The text is updated by the /files OOB span just like the legacy header. -->
                 <span id="app-title">File Browser: <span id="file-browser-header-text">~/.</span></span>
             </div>
             <div id="app-toolbar-center">
-                <!-- File actions — icon-only with title=tooltip for hover discoverability -->
-                <button id="upload-btn"        class="icon-btn" title="Upload File">&#x1F4E4;</button>
-                <button id="new-folder-btn"    class="icon-btn" title="New Folder">&#x1F4C1;+</button>
-                <input type="file" id="file-input" class="hidden" multiple />
-
-                <!-- View modes -->
+                <!-- View modes — centered, isolated from the rest -->
                 <button id="view-mode-list"    class="view-mode-btn active" data-view="list"    title="List view">&#9776;</button>
                 <button id="view-mode-grid"    class="view-mode-btn"         data-view="grid"    title="Grid view">&#9638;</button>
                 <button id="view-mode-details" class="view-mode-btn"         data-view="details" title="Details view">&#9783;</button>
-
-                <!-- Show hidden files — icon-only toggle -->
-                <button id="show-hidden-btn" class="icon-btn" title="Show Hidden Files" aria-pressed="false">&#x1F441;&#xFE0F;</button>
             </div>
             <div id="app-toolbar-right">
+                <!-- File actions clustered with theme + terminal (right side). -->
+                <button id="upload-btn"        class="icon-btn" title="Upload File">&#x1F4E4;</button>
+                <button id="new-folder-btn"    class="icon-btn" title="New Folder">&#x1F4C1;+</button>
+                <button id="show-hidden-btn"   class="icon-btn" title="Show Hidden Files" aria-pressed="false">&#x1F441;&#xFE0F;</button>
+
+                <span class="toolbar-divider"></span>
+
                 <!-- Theme picker — button that opens a dropdown menu on click (replaces <select>) -->
                 <div id="theme-menu-wrapper">
                     <button id="theme-menu-btn" class="icon-btn" title="Theme" aria-haspopup="true" aria-expanded="false">&#x1F3A8;</button>
                     <div id="theme-menu" class="hidden" role="menu"></div>
                 </div>
 
-                <!-- Terminal open modes — side panel (overlay) or new browser tab -->
-                <button id="toggle-terminal-btn" class="icon-btn" title="Open terminal as side panel">&#x3E;&#x5F;</button>
-                <button id="open-terminal-tab-btn" class="icon-btn" title="Open terminal in new browser tab">&#x1F310;</button>
+                <span class="toolbar-divider"></span>
+
+                <!-- Terminal open modes — single button with dropdown (side panel OR new tab). -->
+                <div id="terminal-menu-wrapper">
+                    <button id="terminal-menu-btn" class="icon-btn" title="Open terminal" aria-haspopup="true" aria-expanded="false">&#x3E;&#x5F;</button>
+                    <div id="terminal-menu" class="hidden" role="menu">
+                        <div class="menu-item" data-terminal-action="side-panel">Side Panel</div>
+                        <div class="menu-item" data-terminal-action="new-tab">New Browser Tab</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -46,6 +53,7 @@
             <section class="surface" id="file-browser-surface" data-surface="files">
                 <div id="file-browser">
                     <input type="hidden" id="current-path" value=".">
+                    <input type="file" id="file-input" class="hidden" multiple />
                 <ul id="file-list"
                     hx-get="/files"
                     hx-vals="js:{path: document.getElementById('current-path').value, view: window.__fileListView || 'list'}"
