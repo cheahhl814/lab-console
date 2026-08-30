@@ -178,6 +178,19 @@ body.terminal-only-mode #app-toolbar {
     outline-offset: 2px;
 }
 
+/* ponytail: disabled icon button (e.g. Up button at root directory) gets reduced opacity and not-allowed cursor. */
+.icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.icon-btn:disabled:hover {
+    background-color: var(--color-bg-panel-alt);
+    border-color: var(--color-border);
+    transform: none;
+}
+
 /* ponytail: inline SVG icons inherit button color via currentColor. 18x18 fits the 32x32 button. */
 .icon-svg {
     width: 18px;
@@ -468,6 +481,27 @@ body.terminal-only-mode .terminal-only {
 
 #file-list li.directory {
     font-weight: bold;
+}
+
+/* ponytail: '.. (Up)' row is now the secondary nav fallback (the toolbar Up button is primary).
+   Visually de-emphasize so users don't mistake it for a real folder, but keep it functional for keyboard a11y. */
+#file-list li.directory.up {
+    background-color: var(--color-bg-panel);
+    border-bottom: 1px solid var(--color-border);
+    font-weight: normal;
+    font-size: 12px;
+    color: var(--color-text);
+    opacity: 0.7;
+    padding: 4px 12px;
+}
+
+#file-list li.directory.up:hover {
+    opacity: 1;
+    background-color: var(--color-bg-hover);
+}
+
+#file-list li.directory.up .file-icon {
+    font-size: 12px;
 }
 
 #terminal-container {

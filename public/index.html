@@ -14,6 +14,10 @@
                 <button id="home-btn" class="icon-btn" title="Home (~/)" aria-label="Home">
                     <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-home"/></svg>
                 </button>
+                <!-- Up button — navigate to parent directory. Primary nav action lives in toolbar, not in the list. -->
+                <button id="up-btn" class="icon-btn" title="Up to parent directory" aria-label="Up to parent directory">
+                    <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-up"/></svg>
+                </button>
                 <!-- Breadcrumb replaces the static 'Web Terminal' title.
                      The text is updated by the /files OOB span just like the legacy header. -->
                 <span id="app-title">File Browser: <span id="file-browser-header-text">~/.</span></span>

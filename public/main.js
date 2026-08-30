@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const terminalMenu = document.getElementById('terminal-menu');
     // Home button — jumps to home dir.
     const homeBtn = document.getElementById('home-btn');
+    // Up button — navigates to parent of current path. Disabled at root (home dir).
+    const upBtn = document.getElementById('up-btn');
 
     // --- FUNCTION DEFINITIONS ---
 
@@ -606,6 +608,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 htmx.trigger('#file-list', 'file-list-changed');
             });
         }
+
+        // Up button — navigate to parent directory. Computes parent from current #current-path
+        // value; falls back to '.' (home) if there's no parent. Disabled at home dir.
+        // ponytail: matches the behavior of the old in-list '.. (Up)' row that the server
+        // emitted as the first <li>. We still keep that row as an a11y/keyboard fallback
+        // (visible as a small chip at top of the list) — the toolbar button is the primary
+        // entry point now.
+        function syncUpButtonState() {
+            if (!upBtn) return;
+            const cur = document.getElementById('current-path').value || '.';
+            const parent = cur === '.' || cur === '' ? null : cur.replace(/\/[^/]*$/, '') || '.';
+            upBtn.disabled = parent === null;
+        }
+        if (upBtn) {
+            syncUpButtonState();
+            upBtn.addEventListener('click', () => {
+                const cur = document.getElementById('current-path').value || '.';
+                if (cur === '.' || cur === '') return; // at root, no parent
+                const parent = cur.replace(/\/[^/]*$/, '') || '.';
+                document.getElementById('current-path').value = parent;
+                htmx.trigger('#file-list', 'file-list-changed');
+            });
+        }
+        // ponytail: also sync the up button whenever the file list is refreshed (the OOB
+        // current-path swap updates the value). Wrap htmx:afterSwap on #file-list.
+        document.body.addEventListener('htmx:afterSwap', (e) => {
+            if (e.target.id === 'file-list') syncUpButtonState();
+        });
 
         // Close-terminal button — slides the side panel back out (toggles the .open class).
         const closeTerminalBtn = document.getElementById('close-terminal-btn');
