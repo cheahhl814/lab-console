@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 terminal.style.left = '0';
             }
             // Terminal-only mode: hide file-browser-only toolbar controls (claude-htmx 2026-08-30).
-            ['home-btn', 'app-title', 'upload-btn', 'new-folder-btn', 'show-hidden-btn',
+            ['home-btn', 'up-btn', 'app-title', 'upload-btn', 'new-folder-btn', 'show-hidden-btn',
              'view-mode-list', 'view-mode-grid', 'view-mode-details', 'terminal-menu-wrapper']
                 .forEach(id => {
                     const el = document.getElementById(id);
