@@ -437,22 +437,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- OVERLAY LAYOUT (Phase 0.1) ---
+    // ponytail: terminal is a slide-in panel toggled by the toolbar button.
+    // View-mode buttons are stubs for Phase 0.2 (visual-only for now).
+    function toggleTerminal() {
+        const surface = document.getElementById('terminal-surface');
+        if (!surface) return;
+        surface.classList.toggle('open');
+        const isOpen = surface.classList.contains('open');
+        // Refit active xterm when panel opens — xterm needs visible dimensions to render correctly.
+        if (isOpen) {
+            const activeTab = tabs.find(t => t.id === activeTabId);
+            if (activeTab && activeTab.fitAddon) {
+                requestAnimationFrame(() => activeTab.fitAddon.fit());
+            }
+        }
+    }
+
+    function initOverlayLayout() {
+        const toggleBtn = document.getElementById('toggle-terminal-btn');
+        if (toggleBtn) toggleBtn.addEventListener('click', toggleTerminal);
+
+        // Phase 0.2 stub: view-mode buttons just toggle the .active class for now.
+        // The actual view-mode rendering lands in Phase 0.2.
+        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const view = btn.dataset.view;
+                // Persist the user's choice in localStorage so Phase 0.2 can read it.
+                try { localStorage.setItem('web-terminal:view-mode', view); } catch (_) { /* ignore */ }
+                // No-op visual stub: the file-list will re-render in Phase 0.2 via htmx trigger.
+            });
+        });
+    }
+
     // --- INITIALIZATION CALLS ---
     fetchHomeDir();
     populateThemes();
     createTab(); // Create the first tab on load
 
-    // Split.js Initialization
-    Split(['#file-browser', '#terminal-container'], {
-        sizes: [20, 80],
-        minSize: 200,
-        gutterSize: 8,
-        cursor: 'col-resize',
-        onDrag: () => {
-            const activeTab = tabs.find(t => t.id === activeTabId);
-            if (activeTab) {
-                activeTab.fitAddon.fit();
-            }
-        }
-    });
+    // ponytail: Split.js removed (2026-08-30 Phase 0.1) — terminal is now a slide-in overlay panel,
+    // not a flex-row peer of the file browser. See docs/superpowers/plans/2026-08-30-ui-improvements-and-features.md.
+    initOverlayLayout();
 });
