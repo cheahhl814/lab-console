@@ -123,32 +123,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Setup WebSocket listeners
         ws.onopen = () => {
-            fitAddon.fit();
-            term.write("  ▄▄▄  ▄▄▄  ▄▄    ▄▄  ▄▄▄  ▄▄▄     ▄▄▄▄   ▄▄▄▄▄▄\r\n");
-            term.write("  ███  ███  ██    ██  ███  ███   ██▀▀▀▀█  ██▀▀▀▀█▄\r\n");
-            term.write("  ████████  ██    ██  ████████  ██        ██    ██\r\n");
-            term.write("  ██ ██ ██  ██    ██  ██ ██ ██  ██  ▄▄▄▄  ██████▀\r\n");
-            term.write("  ██ ▀▀ ██  ██    ██  ██ ▀▀ ██  ██  ▀▀██  ██\r\n");
-            term.write("  ██    ██  ▀██▄▄██▀  ██    ██   ██▄▄▄██  ██\r\n");
-            term.write("  ▀▀    ▀▀    ▀▀▀▀    ▀▀    ▀▀     ▀▀▀▀   ▀▀\r\n");
-            term.write(" #######################################################################################\r\n");
-            term.write(" HP Workstation@MUMGP - Web Terminal v0.3\r\n");
-            term.write(" #######################################################################################\r\n");
-            term.write(" HP Workstation@MUMGP uses Fish (Friendly Interactive Shell) by default in place of\r\n");
-            term.write(" Bash Shell. Fish is designed for a modern, user-friendly experience out-of-the-box\r\n");
-            term.write(" with smart features like built-in autosuggestions and syntax highlighting.\r\n");
-            term.write(" #######################################################################################\r\n");
-            term.write(" Recommended bioinformatics tool installation method: Pixi\r\n");
-            term.write(" Pixi is a modern, fast, and project-oriented package manager designed as a\r\n");
-            term.write(" next-generation tool for the conda ecosystem. Pixi uses the resolvo Rust-based solver\r\n");
-            term.write(" for conda packages and uv for PyPI packages, resulting in faster and more accurate\r\n");
-            term.write(" resolution than traditional Conda.\r\n");
-            term.write(" Example usage:\r\n");
-            term.write("  - Install a tool globally: 'pixi global install -c conda-forge -c bioconda <tool_name>'\r\n");
-            term.write("  - Check globally installed tools: 'pixi global list'\r\n");
-            term.write("  - Uninstall a globally installed tool: 'pixi global uninstall <tool_name>'\r\n");
-            term.write("  - Project(directory)-specific tool installation: 'pixi init && pixi add <tool_name>'\r\n");
-            term.write(" #######################################################################################\r\n");
+            // ponytail: defer first paint to the next animation frame. Without this, the
+            // canvas draws into the #terminal-surface compositor layer during the same
+            // initial layout pass that the slide-in transform is resolving, and the
+            // browser never flushes that first draw until some later unrelated event
+            // (e.g. opening a second tab) forces a full repaint. Diagnosed by claude-htmx 2026-08-30.
+            requestAnimationFrame(() => {
+                fitAddon.fit();
+                term.write("  ▄▄▄  ▄▄▄  ▄▄    ▄▄  ▄▄▄  ▄▄▄     ▄▄▄▄   ▄▄▄▄▄▄\r\n");
+                term.write("  ███  ███  ██    ██  ███  ███   ██▀▀▀▀█  ██▀▀▀▀█▄\r\n");
+                term.write("  ████████  ██    ██  ████████  ██        ██    ██\r\n");
+                term.write("  ██ ██ ██  ██    ██  ██ ██ ██  ██  ▄▄▄▄  ██████▀\r\n");
+                term.write("  ██ ▀▀ ██  ██    ██  ██ ▀▀ ██  ██  ▀▀██  ██\r\n");
+                term.write("  ██    ██  ▀██▄▄██▀  ██    ██   ██▄▄▄██  ██\r\n");
+                term.write("  ▀▀    ▀▀    ▀▀▀▀    ▀▀    ▀▀     ▀▀▀▀   ▀▀\r\n");
+                term.write(" #######################################################################################\r\n");
+                term.write(" HP Workstation@MUMGP - Web Terminal v0.3\r\n");
+                term.write(" #######################################################################################\r\n");
+                term.write(" HP Workstation@MUMGP uses Fish (Friendly Interactive Shell) by default in place of\r\n");
+                term.write(" Bash Shell. Fish is designed for a modern, user-friendly experience out-of-the-box\r\n");
+                term.write(" with smart features like built-in autosuggestions and syntax highlighting.\r\n");
+                term.write(" #######################################################################################\r\n");
+                term.write(" Recommended bioinformatics tool installation method: Pixi\r\n");
+                term.write(" Pixi is a modern, fast, and project-oriented package manager designed as a\r\n");
+                term.write(" next-generation tool for the conda ecosystem. Pixi uses the resolvo Rust-based solver\r\n");
+                term.write(" for conda packages and uv for PyPI packages, resulting in faster and more accurate\r\n");
+                term.write(" resolution than traditional Conda.\r\n");
+                term.write(" Example usage:\r\n");
+                term.write("  - Install a tool globally: 'pixi global install -c conda-forge -c bioconda <tool_name>'\r\n");
+                term.write("  - Check globally installed tools: 'pixi global list'\r\n");
+                term.write("  - Uninstall a globally installed tool: 'pixi global uninstall <tool_name>'\r\n");
+                term.write("  - Project(directory)-specific tool installation: 'pixi init && pixi add <tool_name>'\r\n");
+                term.write(" #######################################################################################\r\n");
+            });
         };
         ws.onmessage = (event) => {
             term.write(event.data);
