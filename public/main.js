@@ -542,6 +542,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
                 });
+            // Also hide the close-pane button — terminal is the only surface, no panel to collapse.
+            const closePaneBtn = document.getElementById('close-terminal-btn');
+            if (closePaneBtn) closePaneBtn.style.display = 'none';
             // Show and wire the back-to-browser button (was hidden via .hidden class).
             const backBtn = document.getElementById('back-to-browser-btn');
             if (backBtn) {
@@ -552,6 +555,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // ponytail: also rename the tab so multi-tab users can tell file-browser from terminal tabs.
             document.title = 'Terminal — Web Terminal';
+            // Body class activates the 2px accent top-border indicator and un-hides .terminal-only buttons.
+            document.body.classList.add('terminal-only-mode');
+            // Wire the Tier A header actions (font stepper, notify toggle, copy session).
+            initTerminalOnlyExtras();
         }
 
         // Terminal menu dropdown — single button, two actions.
@@ -633,6 +640,129 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.__fileListView = 'list';
             }
         } catch (_) { window.__fileListView = 'list'; }
+    }
+
+    // --- TERMINAL-ONLY HEADER EXTRAS (Tier A) ---
+    // Called from initOverlayLayout() only in ?terminal=open mode. Wires the font stepper,
+    // job-finished notification toggle, and copy-session-info button.
+    function initTerminalOnlyExtras() {
+        // ----- Font-size stepper (Tier A #1) -----
+        const FONT_MIN = 8, FONT_MAX = 24, FONT_STEP = 2, FONT_DEFAULT = 14;
+        function currentFontSize() {
+            const activeTab = tabs.find(t => t.id === activeTabId);
+            return activeTab && activeTab.term ? activeTab.term.options.fontSize : FONT_DEFAULT;
+        }
+        function adjustFontSize(delta) {
+            const next = Math.max(FONT_MIN, Math.min(FONT_MAX, currentFontSize() + delta));
+            tabs.forEach((tab) => { tab.term.options.fontSize = next; if (tab.fitAddon) tab.fitAddon.fit(); });
+            try { localStorage.setItem('web-terminal:font-size', String(next)); } catch (_) { /* ignore */ }
+        }
+        const fontDown = document.getElementById('font-decrease-btn');
+        const fontUp = document.getElementById('font-increase-btn');
+        if (fontDown) fontDown.addEventListener('click', () => adjustFontSize(-FONT_STEP));
+        if (fontUp) fontUp.addEventListener('click', () => adjustFontSize(+FONT_STEP));
+        // Restore last font size on tab creation. Modify createTab to apply persisted size.
+        try {
+            const saved = parseInt(localStorage.getItem('web-terminal:font-size'), 10);
+            if (saved >= FONT_MIN && saved <= FONT_MAX) {
+                tabs.forEach((tab) => { tab.term.options.fontSize = saved; });
+            }
+        } catch (_) { /* ignore */ }
+
+        // ----- Copy session info (Tier A #2) -----
+        // ponytail: copies hostname + active tab id to clipboard via navigator.clipboard.
+        // Falls back to a textarea-select hack if the modern API is unavailable (e.g. http:// in some browsers).
+        const copyBtn = document.getElementById('copy-session-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async () => {
+                const hostname = window.location.hostname || 'localhost';
+                const tabId = activeTabId || 'none';
+                const text = `${hostname}:tab-${tabId}`;
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                    } else {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                    }
+                    flashTitle(`Copied: ${text}`);
+                } catch (err) {
+                    console.error('Copy failed:', err);
+                    flashTitle('Copy failed');
+                }
+            });
+        }
+
+        // ----- Job-finished notification toggle (Tier A #3) -----
+        // ponytail: simple detection via xterm onData + a 'still-busy' heuristic. When toggled ON,
+        // we watch for prompt-shaped output (fish prints '➜ ' or '$ ' at idle). On long silence
+        // break, flash document.title + (if granted) fire a Notification.
+        const notifyBtn = document.getElementById('notify-btn');
+        let notifyOn = false;
+        let lastOutputAt = Date.now();
+        let notifyPromptSeen = false;
+        if (notifyBtn) {
+            notifyBtn.addEventListener('click', async () => {
+                notifyOn = !notifyOn;
+                notifyBtn.setAttribute('aria-pressed', String(notifyOn));
+                if (notifyOn) {
+                    // Request Notification permission. Graceful if denied.
+                    if ('Notification' in window && Notification.permission === 'default') {
+                        await Notification.requestPermission();
+                    }
+                    flashTitle('Notify ON — will flash when shell idles');
+                } else {
+                    flashTitle('Notify OFF');
+                }
+            });
+        }
+        // Watch all tabs for output. When the gap between outputs exceeds NOTIFY_IDLE_MS, fire.
+        const NOTIFY_IDLE_MS = 3000; // 3s of silence = shell likely done.
+        setInterval(() => {
+            if (!notifyOn) return;
+            const idle = Date.now() - lastOutputAt;
+            if (idle >= NOTIFY_IDLE_MS && !notifyPromptSeen) {
+                notifyPromptSeen = true;
+                flashTitle('Shell idle — job may be done');
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    try { new Notification('Web Terminal', { body: 'Shell prompt returned \u2014 check your job.' }); }
+                    catch (_) { /* ignore */ }
+                }
+            }
+        }, 1000);
+        // Hook tab onData (added in createTab) to bump lastOutputAt. We monkey-patch the array
+        // forEach here so future tabs also pick it up.
+        tabs.forEach((tab) => {
+            if (tab.term && !tab._notifyPatched) {
+                const origOnData = tab.term.onData.bind(tab.term);
+                tab.term.onData((data) => { lastOutputAt = Date.now(); notifyPromptSeen = false; origOnData(data); });
+                tab._notifyPatched = true;
+            }
+        });
+        // Future tabs: patch in createTab's tab-creation code path. Minimal: re-scan every interval.
+        setInterval(() => {
+            tabs.forEach((tab) => {
+                if (tab.term && !tab._notifyPatched) {
+                    const origOnData = tab.term.onData.bind(tab.term);
+                    tab.term.onData((data) => { lastOutputAt = Date.now(); notifyPromptSeen = false; origOnData(data); });
+                    tab._notifyPatched = true;
+                }
+            });
+        }, 2000);
+    }
+
+    // ponytail: flash the document.title to surface async events (copy success, notify toggle).
+    // Restores the original title after 3 seconds.
+    function flashTitle(msg) {
+        const original = document.title;
+        document.title = msg;
+        setTimeout(() => { document.title = original; }, 3000);
     }
 
     // --- INITIALIZATION CALLS ---

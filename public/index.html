@@ -17,6 +17,14 @@
                 <!-- Breadcrumb replaces the static 'Web Terminal' title.
                      The text is updated by the /files OOB span just like the legacy header. -->
                 <span id="app-title">File Browser: <span id="file-browser-header-text">~/.</span></span>
+
+                <!-- Font-size stepper — visible only in terminal-only mode (left cluster was empty). -->
+                <button id="font-decrease-btn" class="icon-btn terminal-only" title="Decrease font size" aria-label="Decrease font size">
+                    <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-font-minus"/></svg>
+                </button>
+                <button id="font-increase-btn" class="icon-btn terminal-only" title="Increase font size" aria-label="Increase font size">
+                    <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-font-plus"/></svg>
+                </button>
             </div>
             <div id="app-toolbar-right">
                 <!-- File actions, view modes, theme, terminal — all clustered on the right. -->
@@ -47,6 +55,14 @@
                     </button>
                     <div id="theme-menu" class="hidden" role="menu"></div>
                 </div>
+
+                <!-- Terminal-only-mode extras (hidden in file-browser mode). -->
+                <button id="notify-btn" class="icon-btn terminal-only" title="Notify when shell returns to prompt" aria-pressed="false" aria-label="Toggle job notifications">
+                    <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-bell"/></svg>
+                </button>
+                <button id="copy-session-btn" class="icon-btn terminal-only" title="Copy session info" aria-label="Copy session info">
+                    <svg class="icon-svg" aria-hidden="true"><use href="icons.svg#icon-copy"/></svg>
+                </button>
 
                 <!-- Terminal open modes — single button with dropdown (side panel OR new tab). -->
                 <div id="terminal-menu-wrapper">

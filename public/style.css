@@ -88,6 +88,11 @@ body, html {
     flex-shrink: 0;
 }
 
+/* ponytail: 2px accent top border = glance-able indicator of terminal-only mode. */
+body.terminal-only-mode #app-toolbar {
+    border-top: 2px solid var(--color-accent);
+}
+
 #app-toolbar-left, #app-toolbar-center, #app-toolbar-right {
     display: flex;
     align-items: center;
@@ -328,6 +333,16 @@ body, html {
    the new #back-to-browser-btn (hidden by default, shown only in terminal-only mode). */
 .hidden {
     display: none !important;
+}
+
+/* ponytail: .terminal-only class — buttons only meaningful in terminal-only mode
+   (font stepper, notify toggle, copy-session). Hidden in file-browser mode. */
+.terminal-only {
+    display: none !important;
+}
+
+body.terminal-only-mode .terminal-only {
+    display: inline-flex !important;
 }
 
 /* ponytail: grid view — same <ul>, CSS-only layout via container query-ish flex grid. */

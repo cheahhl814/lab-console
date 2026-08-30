@@ -78,4 +78,29 @@
   <symbol id="icon-close-pane" viewBox="0 0 24 24">
     <path class="icon-stroke" d="M8 6 L13 12 L8 18 M14 6 L19 12 L14 18" />
   </symbol>
+
+  <!-- font-plus: 'A' with a small + (increase xterm font size) -->
+  <symbol id="icon-font-plus" viewBox="0 0 24 24">
+    <path class="icon-stroke" d="M4 19 L8 5 L12 19 M5.5 14 H10.5" />
+    <path class="icon-stroke" d="M16 9 V15 M13 12 H19" />
+  </symbol>
+
+  <!-- font-minus: 'A' with a small - (decrease xterm font size) -->
+  <symbol id="icon-font-minus" viewBox="0 0 24 24">
+    <path class="icon-stroke" d="M4 19 L8 5 L12 19 M5.5 14 H10.5" />
+    <path class="icon-stroke" d="M13 12 H19" />
+  </symbol>
+
+  <!-- bell: notification toggle -->
+  <symbol id="icon-bell" viewBox="0 0 24 24">
+    <path class="icon-stroke" d="M6 16 V11 a6 6 0 0 1 12 0 V16 L20 18 H4 Z" />
+    <path class="icon-stroke" d="M10 20 a2 2 0 0 0 4 0" />
+  </symbol>
+
+  <!-- copy: clipboard with content (copy session info) -->
+  <symbol id="icon-copy" viewBox="0 0 24 24">
+    <rect class="icon-stroke" x="6" y="4" width="13" height="17" rx="1.5" />
+    <path class="icon-stroke" d="M9 4 V2.5 a1 1 0 0 1 1 -1 H14 a1 1 0 0 1 1 1 V4" />
+    <path class="icon-stroke" d="M9 11 H16 M9 14 H14 M9 17 H12" />
+  </symbol>
 </svg>
