@@ -521,6 +521,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initOverlayLayout() {
+        // ponytail: ?terminal=open query forces the terminal-only mode (no file browser,
+        // terminal panel open full-viewport). Used by the 'New Browser Tab' terminal action.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('terminal') === 'open') {
+            const fileSurface = document.getElementById('file-browser-surface');
+            if (fileSurface) fileSurface.style.display = 'none';
+            const terminal = document.getElementById('terminal-surface');
+            if (terminal) {
+                terminal.classList.add('open');
+                // Override the slide-in overlay positioning for terminal-only mode so it fills viewport.
+                terminal.style.transform = 'none';
+                terminal.style.width = '100%';
+                terminal.style.left = '0';
+            }
+        }
+
         // Terminal menu dropdown — single button, two actions.
         if (terminalMenuBtn && terminalMenu) {
             terminalMenuBtn.addEventListener('click', (e) => {
@@ -535,7 +551,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (action === 'side-panel') {
                         toggleTerminal();
                     } else if (action === 'new-tab') {
-                        window.open(window.location.pathname, '_blank');
+                        // ponytail: open a new tab to the same page with ?terminal=open;
+                        // that flag hides the file browser and forces the terminal panel open.
+                        window.open(window.location.pathname + '?terminal=open', '_blank');
                     }
                     terminalMenu.classList.add('hidden');
                     terminalMenuBtn.setAttribute('aria-expanded', 'false');
