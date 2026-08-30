@@ -340,8 +340,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetLi = e.target.closest('li, tr[data-path]');
 
         // Show/hide menu items based on context
-        if (targetLi && !targetLi.textContent.includes('.. (Up)')) {
-            // Clicked on a file or folder
+        if (targetLi) {
+            // Clicked on a file or folder. (2026-08-30: removed the `.. (Up)` exclusion —
+            // that row no longer exists; parent navigation is the toolbar #up-btn.)
             Object.values(contextMenuItems).forEach(item => item.style.display = 'none');
             const path = targetLi.dataset.path;
             const type = targetLi.dataset.type;
@@ -610,32 +611,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Up button — navigate to parent directory. Computes parent from current #current-path
-        // value; falls back to '.' (home) if there's no parent. Disabled at home dir.
-        // ponytail: matches the behavior of the old in-list '.. (Up)' row that the server
-        // emitted as the first <li>. We still keep that row as an a11y/keyboard fallback
-        // (visible as a small chip at top of the list) — the toolbar button is the primary
-        // entry point now.
+        // value; disabled at home dir. Uses a path.dirname-equivalent that handles all edge
+        // cases (single segment, trailing slash, empty, dot).
+        function parentOfPath(p) {
+            if (!p || p === '.' || p === '') return null;
+            // Strip trailing slash if any (defensive — server doesn't send them but worth guarding).
+            const trimmed = p.endsWith('/') ? p.slice(0, -1) : p;
+            const lastSlash = trimmed.lastIndexOf('/');
+            if (lastSlash === -1) {
+                // Single segment with no slash (e.g. 'foo') — parent is the root '.'.
+                return '.';
+            }
+            const parent = trimmed.slice(0, lastSlash);
+            return parent === '' ? '.' : parent;
+        }
         function syncUpButtonState() {
             if (!upBtn) return;
-            const cur = document.getElementById('current-path').value || '.';
-            const parent = cur === '.' || cur === '' ? null : cur.replace(/\/[^/]*$/, '') || '.';
-            upBtn.disabled = parent === null;
+            upBtn.disabled = parentOfPath(document.getElementById('current-path').value) === null;
         }
         if (upBtn) {
             syncUpButtonState();
+            // ponytail: disable Up button while a fetch is in flight so rapid double-clicks
+            // don't skip levels. Re-enables on htmx:afterSwap.
+            upBtn.addEventListener('htmx:beforeRequest', () => { upBtn.disabled = true; });
+            document.body.addEventListener('htmx:afterSwap', (e) => {
+                if (e.target.id === 'file-list') syncUpButtonState();
+            });
             upBtn.addEventListener('click', () => {
                 const cur = document.getElementById('current-path').value || '.';
-                if (cur === '.' || cur === '') return; // at root, no parent
-                const parent = cur.replace(/\/[^/]*$/, '') || '.';
+                const parent = parentOfPath(cur);
+                if (parent === null) return; // at root, no parent
                 document.getElementById('current-path').value = parent;
                 htmx.trigger('#file-list', 'file-list-changed');
             });
         }
-        // ponytail: also sync the up button whenever the file list is refreshed (the OOB
-        // current-path swap updates the value). Wrap htmx:afterSwap on #file-list.
-        document.body.addEventListener('htmx:afterSwap', (e) => {
-            if (e.target.id === 'file-list') syncUpButtonState();
-        });
 
         // Close-terminal button — slides the side panel back out (toggles the .open class).
         const closeTerminalBtn = document.getElementById('close-terminal-btn');

@@ -483,27 +483,6 @@ body.terminal-only-mode .terminal-only {
     font-weight: bold;
 }
 
-/* ponytail: '.. (Up)' row is now the secondary nav fallback (the toolbar Up button is primary).
-   Visually de-emphasize so users don't mistake it for a real folder, but keep it functional for keyboard a11y. */
-#file-list li.directory.up {
-    background-color: var(--color-bg-panel);
-    border-bottom: 1px solid var(--color-border);
-    font-weight: normal;
-    font-size: 12px;
-    color: var(--color-text);
-    opacity: 0.7;
-    padding: 4px 12px;
-}
-
-#file-list li.directory.up:hover {
-    opacity: 1;
-    background-color: var(--color-bg-hover);
-}
-
-#file-list li.directory.up .file-icon {
-    font-size: 12px;
-}
-
 #terminal-container {
     width: 100%;
     height: 100%;

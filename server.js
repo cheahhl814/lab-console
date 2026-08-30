@@ -344,11 +344,10 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
     // ponytail: details view uses the SAME <li> markup as list/grid. CSS Grid columns
     // lay out size/mtime/type. No <table> inside <ul> (invalid HTML; browsers auto-close
     // the <ul> before the <table>, breaking the .view-details CSS target).
+    // 2026-08-30: removed the '.. (Up)' row that the server used to emit as the first <li>.
+    // Parent navigation now lives in the toolbar Up button (#up-btn).
     if (view === 'details') {
         let html = '';
-        if (parentPath !== null) {
-            html += `<li class="directory up" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view: 'details' }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"><span class="col-name">&#128194; .. (Up)</span></li>`;
-        }
         for (const entry of entries) {
             const entryPath = `${currentPath}/${entry.name}`;
             const escapedName = escapeHtml(entry.name);
@@ -378,10 +377,9 @@ function renderFileListFragment({ currentPath, parentPath, entries }, view = 'li
     }
 
     let html = '';
-    if (parentPath !== null) {
-        html += `<li class="directory up" hx-get="/files" hx-vals="${escapeHtml(JSON.stringify({ path: parentPath, view }))}" hx-target="#file-list" hx-swap="innerHTML" hx-include="#show-hidden-checkbox"><span class="file-icon">&#128194;</span> <span class="file-name">.. (Up)</span></li>`;
-    }
-
+    // ponytail: removed the '.. (Up)' list row that the server used to emit (2026-08-30).
+    // Parent navigation is now the toolbar #up-btn. The Up button computes the parent
+    // client-side and triggers the same htmx fragment request the row used to make.
     for (const entry of entries) {
         const entryPath = `${currentPath}/${entry.name}`;
         const icon = entry.type === 'directory' ? '&#128194;' : '&#128196;';
