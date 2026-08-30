@@ -775,9 +775,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INITIALIZATION CALLS ---
     fetchHomeDir();
     populateThemes();
-    createTab(); // Create the first tab on load
-
-    // ponytail: Split.js removed (2026-08-30 Phase 0.1) — terminal is now a slide-in overlay panel,
-    // not a flex-row peer of the file browser. See docs/superpowers/plans/2026-08-30-ui-improvements-and-features.md.
+    // ponytail: initOverlayLayout() MUST run before createTab() so #terminal-surface
+    // is at its terminal-only-mode final dimensions (width:100%, transform:none)
+    // when createTab's synchronous switchToTab() calls fitAddon.fit(). Otherwise
+    // xterm fits to the off-screen 50vw default size and the first tab renders
+    // invisibly until some later unrelated event forces a full repaint.
+    // Diagnosed by claude-htmx 2026-08-30 (second round).
     initOverlayLayout();
+    createTab(); // Create the first tab on load
 });
