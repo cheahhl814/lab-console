@@ -9,7 +9,6 @@ const multer = require('multer');
 const basicAuth = require('express-basic-auth');
 const si = require('systeminformation');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const logger = require('./logger');
 
 const userHomeDir = os.homedir();
@@ -79,15 +78,6 @@ if (!process.env.AUTH_USER || !process.env.AUTH_PASS) {
     logger.error('AUTH_USER and AUTH_PASS environment variables must be set. Refusing to start.');
     process.exit(1);
 }
-
-// Applied before auth so it also mitigates basic-auth brute-forcing, not just mutation
-// spam. Generous enough for normal usage (status-bar polling is one request/5s).
-app.use(rateLimit({
-    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-    limit: Number(process.env.RATE_LIMIT_MAX) || 300,
-    standardHeaders: true,
-    legacyHeaders: false
-}));
 
 app.use(basicAuth({
     users: { [process.env.AUTH_USER]: process.env.AUTH_PASS },
@@ -218,22 +208,17 @@ app.post('/duplicate-item', (req, res) => {
     }
 });
 
-// Multer storage configuration for uploads
-const uploadTmpDir = path.join(os.tmpdir(), 'web_terminal_uploads');
+// Multer storage configuration for uploads. The temp dir lives under home (not os.tmpdir(),
+// often a RAM-backed tmpfs) so large uploads don't exhaust memory and the final move is a
+// cheap same-filesystem rename. Multer's default random temp names avoid collisions.
+const uploadTmpDir = path.join(userHomeDir, '.cache', 'web_terminal_uploads');
 fs.mkdirSync(uploadTmpDir, { recursive: true });
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadTmpDir);
-    },
-    filename: function (req, file, cb) {
-        cb(null, file.originalname);
-    }
-});
 const upload = multer({
-    storage: storage,
+    dest: uploadTmpDir,
     limits: {
-        fileSize: (Number(process.env.UPLOAD_MAX_FILE_SIZE_MB) || 200) * 1024 * 1024,
+        // No per-file cap unless UPLOAD_MAX_FILE_SIZE_MB is set.
+        fileSize: Number(process.env.UPLOAD_MAX_FILE_SIZE_MB) * 1024 * 1024 || Infinity,
         files: Number(process.env.UPLOAD_MAX_FILES) || 20
     }
 });
@@ -287,9 +272,16 @@ app.post('/upload', upload.any(), (req, res) => {
             const tempPath = file.path;
             const finalPath = path.join(targetDestination, file.originalname);
             try {
-                fs.copyFileSync(tempPath, finalPath);
-                fs.unlinkSync(tempPath); // Delete the temporary file
+                try {
+                    fs.renameSync(tempPath, finalPath);
+                } catch (err) {
+                    if (err.code !== 'EXDEV') throw err;
+                    // Temp dir on a different filesystem than the destination.
+                    fs.copyFileSync(tempPath, finalPath);
+                    fs.unlinkSync(tempPath);
+                }
             } catch (err) {
+                fs.rmSync(tempPath, { force: true });
                 logger.error({ err }, 'Error moving or deleting file');
                 errors.push(`Failed to process file ${file.originalname}: ${err.message}`);
             }
@@ -579,13 +571,14 @@ function getLanAddress() {
 if (require.main === module) {
     const port = process.env.PORT || 3000;
     const { TLS_CERT_PATH, TLS_KEY_PATH } = process.env;
+    let server;
     if (TLS_CERT_PATH && TLS_KEY_PATH) {
         const https = require('https');
         const options = {
             cert: fs.readFileSync(TLS_CERT_PATH),
             key: fs.readFileSync(TLS_KEY_PATH)
         };
-        https.createServer(options, app).listen(port, '0.0.0.0', () => {
+        server = https.createServer(options, app).listen(port, '0.0.0.0', () => {
             logger.info(`Server listening on https://${getLanAddress()}:${port}`);
         });
     } else {
@@ -594,10 +587,12 @@ if (require.main === module) {
             'Credentials and terminal traffic are unencrypted on the wire. ' +
             'Set both env vars to enable HTTPS before exposing this beyond localhost/a trusted network.'
         );
-        app.listen(port, '0.0.0.0', () => {
+        server = app.listen(port, '0.0.0.0', () => {
             logger.info(`Server listening on http://${getLanAddress()}:${port}`);
         });
     }
+    // Node's default 5-minute requestTimeout aborts long uploads of large files.
+    server.requestTimeout = 0;
 }
 
 module.exports = app;

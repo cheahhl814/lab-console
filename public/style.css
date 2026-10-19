@@ -605,3 +605,51 @@ body.terminal-only-mode .terminal-only {
 .status-button:hover {
     background-color: var(--color-accent-hover);
 }
+
+/* Upload progress popup — bottom-right, above the status bar and terminal panel. */
+#upload-progress {
+    position: fixed;
+    right: 16px;
+    bottom: 37px; /* 25px status bar + 12px gap */
+    width: 300px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    padding: 12px;
+    background-color: var(--color-bg-panel);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 60;
+    font-size: 13px;
+}
+
+#upload-progress-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 8px;
+}
+
+#upload-progress-bar {
+    width: 100%;
+    accent-color: var(--color-accent);
+}
+
+#upload-progress-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+#upload-cancel-btn {
+    background-color: var(--color-bg-input);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+#upload-cancel-btn:hover {
+    background-color: var(--color-bg-hover);
+}

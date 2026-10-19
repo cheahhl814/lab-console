@@ -101,10 +101,10 @@ This project relies on the following packages, which are automatically installed
    Run the following command to start the backend server:
    
    ```bash
-   node server.js
+   AUTH_USER=<user> AUTH_PASS=<password> node server.js
    ```
    
-   The server will start on port 3000.
+   The server will start on port 3000 (override with `PORT`).
 
 2. **Local Access:**
    Open your web browser and navigate to:
@@ -132,23 +132,9 @@ This project relies on the following packages, which are automatically installed
 
 ## Authentication
 
-The application uses HTTP Basic Authentication to protect access. The username and password are hardcoded in `server.js`.
+The application uses HTTP Basic Authentication. Credentials come from the `AUTH_USER` and `AUTH_PASS` environment variables; the server refuses to start if either is unset. See `.env.example` for these and the other optional settings (`PORT`, `TLS_CERT_PATH`/`TLS_KEY_PATH`, `LOG_LEVEL`, upload limits).
 
-**IMPORTANT:** You should change these credentials before using the application. Do not use these hardcoded credentials in a production environment.
-
-Here is the relevant code block from `server.js`:
-
-```javascript
-// IMPORTANT: In a real application, use a more secure way to manage users and passwords.
-// Do not hardcode credentials directly in the code.
-app.use(basicAuth({
-    users: { 'mumgp': 'REDACTED' },
-    challenge: true,
-    unauthorizedResponse: 'Unauthorized access.'
-}));
-```
-
-To change the credentials, you can edit the `users` object in `server.js`. For a more secure setup, it is highly recommended to use environment variables to manage credentials rather than hardcoding them in the source code.
+The server does **not** rate-limit requests, so nothing slows down password guessing. Use a strong password, and if the server is reachable beyond a trusted network, put a reverse proxy with rate limiting (or `fail2ban`) in front of it.
 
 ## Configuration
 
@@ -173,8 +159,10 @@ To keep the server running even after you close your terminal, you can use a pro
 2. **Start the server with `pm2`:**
    
    ```bash
-   pm2 start server.js
+   AUTH_USER=<user> AUTH_PASS=<password> pm2 start server.js
    ```
+   
+   `pm2` saves these variables when the process starts, so `pm2 restart server` keeps using them. After changing them, run `pm2 restart server --update-env`.
 
 3. **Manage the application:**
    
@@ -190,7 +178,7 @@ To keep the server running even after you close your terminal, you can use a pro
 1. **Start the server:**
    
    ```bash
-   nohup node server.js &
+   AUTH_USER=<user> AUTH_PASS=<password> nohup node server.js &
    ```
    
    Output will be redirected to a `nohup.out` file in the project directory.
@@ -208,4 +196,4 @@ To keep the server running even after you close your terminal, you can use a pro
 
 ## Security Warning
 
-The application is configured to be accessible from any device on your local network. Do not expose this server directly to the public internet, as it could grant unauthorized access to your system.
+The application is configured to be accessible from any device on your local network. Do not expose this server directly to the public internet, as it could grant unauthorized access to your system. There is no built-in rate limiting (see [Authentication](#authentication)).

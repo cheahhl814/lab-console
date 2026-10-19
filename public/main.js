@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let tabs = [];
     let activeTabId = null;
     let clipboard = null; // For copy/paste
+    let lastOutputAt = Date.now(); // Bumped on PTY output; read by the notify toggle.
 
     const themes = {
         'Default': { background: '#252526', foreground: '#d4d4d4', cursor: '#d4d4d4' },
@@ -112,13 +113,20 @@ document.addEventListener('DOMContentLoaded', () => {
         terminalViews.appendChild(termViewEl);
 
         // Create xterm instance
-        const term = new Terminal({ theme: themes[activeTheme] });
+        // Apply the persisted font size (set by the terminal-only font stepper).
+        const termOptions = { theme: themes[activeTheme] };
+        try {
+            const savedFont = parseInt(localStorage.getItem('web-terminal:font-size'), 10);
+            if (savedFont >= 8 && savedFont <= 24) termOptions.fontSize = savedFont;
+        } catch (_) { /* ignore */ }
+        const term = new Terminal(termOptions);
         const fitAddon = new FitAddon.FitAddon();
         term.loadAddon(fitAddon);
         term.open(termViewEl);
 
-        // Create WebSocket
-        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        // Create WebSocket (wss:// when the page is served over HTTPS).
+        const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${wsProto}://${window.location.host}/ws`);
 
         const tab = { id: tabId, term, ws, fitAddon, tabEl, termViewEl };
         tabs.push(tab);
@@ -132,6 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // (e.g. opening a second tab) forces a full repaint. Diagnosed by claude-htmx 2026-08-30.
             requestAnimationFrame(() => {
                 fitAddon.fit();
+                // Always sync PTY size on open: resizes fired while CONNECTING were dropped,
+                // and fit() emits no onResize if dims didn't change, leaving the PTY at 80x30.
+                ws.send(JSON.stringify({ cols: term.cols, rows: term.rows }));
                 term.write("  ▄▄▄  ▄▄▄  ▄▄    ▄▄  ▄▄▄  ▄▄▄     ▄▄▄▄   ▄▄▄▄▄▄\r\n");
                 term.write("  ███  ███  ██    ██  ███  ███   ██▀▀▀▀█  ██▀▀▀▀█▄\r\n");
                 term.write("  ████████  ██    ██  ████████  ██        ██    ██\r\n");
@@ -160,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         ws.onmessage = (event) => {
+            lastOutputAt = Date.now();
             term.write(event.data);
         };
         ws.onclose = () => term.write('\r\nConnection closed. This tab is now inactive.\r\n');
@@ -170,7 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
         term.onResize(({ cols, rows }) => {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
-                ws.send(JSON.stringify({ cols, rows }));
+                // Still connecting → onopen sends the current size instead.
+                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ cols, rows }));
             }, 100);
         });
 
@@ -300,22 +313,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const files = fileInput.files;
         if (files.length === 0) return;
 
-        for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('destination', uploadDestination);
+        const popup = document.getElementById('upload-progress');
+        const nameEl = document.getElementById('upload-progress-name');
+        const bar = document.getElementById('upload-progress-bar');
+        const pctEl = document.getElementById('upload-progress-pct');
+        const cancelBtn = document.getElementById('upload-cancel-btn');
+        popup.classList.remove('hidden');
 
+        let cancelled = false;
+        let xhr = null;
+        cancelBtn.onclick = () => { cancelled = true; if (xhr) xhr.abort(); };
+
+        for (const [i, file] of [...files].entries()) {
+            if (cancelled) break;
+            const formData = new FormData();
+            formData.append('destination', uploadDestination);
+            formData.append('file', file);
+
+            nameEl.textContent = `${file.name} (${i + 1}/${files.length})`;
+            bar.value = 0;
+            pctEl.textContent = '0%';
+
+            // ponytail: XHR, not fetch — fetch exposes no upload-progress events.
             try {
-                const response = await fetch('/upload', { method: 'POST', body: formData });
-                if (!response.ok) {
-                    throw new Error(await response.text() || `Upload failed for ${file.name}`);
-                }
+                await new Promise((resolve, reject) => {
+                    xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/upload');
+                    xhr.upload.onprogress = (e) => {
+                        if (!e.lengthComputable) return;
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        bar.value = pct;
+                        pctEl.textContent = `${pct}%`;
+                    };
+                    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300)
+                        ? resolve()
+                        : reject(new Error(xhr.responseText || `Upload failed for ${file.name}`));
+                    xhr.onerror = () => reject(new Error(`Network error uploading ${file.name}`));
+                    xhr.onabort = () => resolve();
+                    xhr.send(formData);
+                });
             } catch (error) {
                 alert(error.message);
                 console.error(`Error uploading file ${file.name}:`, error);
             }
         }
+        xhr = null;
+        popup.classList.add('hidden');
         fileInput.value = '';
+        // The server's HX-Trigger header only reaches htmx requests, so refresh explicitly.
+        htmx.trigger('#file-list', 'file-list-changed');
     });
 
     // CONTEXT MENU EVENT LISTENERS
@@ -707,13 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fontUp = document.getElementById('font-increase-btn');
         if (fontDown) fontDown.addEventListener('click', () => adjustFontSize(-FONT_STEP));
         if (fontUp) fontUp.addEventListener('click', () => adjustFontSize(+FONT_STEP));
-        // Restore last font size on tab creation. Modify createTab to apply persisted size.
-        try {
-            const saved = parseInt(localStorage.getItem('web-terminal:font-size'), 10);
-            if (saved >= FONT_MIN && saved <= FONT_MAX) {
-                tabs.forEach((tab) => { tab.term.options.fontSize = saved; });
-            }
-        } catch (_) { /* ignore */ }
+        // Persisted font size is applied per tab in createTab().
 
         // ----- Copy session info (Tier A #2) -----
         // ponytail: copies hostname + active tab id to clipboard via navigator.clipboard.
@@ -746,18 +786,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // ----- Job-finished notification toggle (Tier A #3) -----
-        // ponytail: simple detection via xterm onData + a 'still-busy' heuristic. When toggled ON,
-        // we watch for prompt-shaped output (fish prints '➜ ' or '$ ' at idle). On long silence
-        // break, flash document.title + (if granted) fire a Notification.
+        // ponytail: idle heuristic — ws.onmessage bumps lastOutputAt; after NOTIFY_IDLE_MS of
+        // silence following new output, flash document.title + (if granted) fire a Notification.
         const notifyBtn = document.getElementById('notify-btn');
         let notifyOn = false;
-        let lastOutputAt = Date.now();
-        let notifyPromptSeen = false;
+        let notifyPromptSeen = true; // Don't fire until fresh output arrives after toggle-on.
         if (notifyBtn) {
             notifyBtn.addEventListener('click', async () => {
                 notifyOn = !notifyOn;
                 notifyBtn.setAttribute('aria-pressed', String(notifyOn));
                 if (notifyOn) {
+                    notifyPromptSeen = true;
                     // Request Notification permission. Graceful if denied.
                     if ('Notification' in window && Notification.permission === 'default') {
                         await Notification.requestPermission();
@@ -770,7 +809,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Watch all tabs for output. When the gap between outputs exceeds NOTIFY_IDLE_MS, fire.
         const NOTIFY_IDLE_MS = 3000; // 3s of silence = shell likely done.
+        let seenOutputAt = lastOutputAt;
         setInterval(() => {
+            if (lastOutputAt !== seenOutputAt) { seenOutputAt = lastOutputAt; notifyPromptSeen = false; }
             if (!notifyOn) return;
             const idle = Date.now() - lastOutputAt;
             if (idle >= NOTIFY_IDLE_MS && !notifyPromptSeen) {
@@ -782,33 +823,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }, 1000);
-        // Hook tab onData (added in createTab) to bump lastOutputAt. We monkey-patch the array
-        // forEach here so future tabs also pick it up.
-        tabs.forEach((tab) => {
-            if (tab.term && !tab._notifyPatched) {
-                const origOnData = tab.term.onData.bind(tab.term);
-                tab.term.onData((data) => { lastOutputAt = Date.now(); notifyPromptSeen = false; origOnData(data); });
-                tab._notifyPatched = true;
-            }
-        });
-        // Future tabs: patch in createTab's tab-creation code path. Minimal: re-scan every interval.
-        setInterval(() => {
-            tabs.forEach((tab) => {
-                if (tab.term && !tab._notifyPatched) {
-                    const origOnData = tab.term.onData.bind(tab.term);
-                    tab.term.onData((data) => { lastOutputAt = Date.now(); notifyPromptSeen = false; origOnData(data); });
-                    tab._notifyPatched = true;
-                }
-            });
-        }, 2000);
     }
 
     // ponytail: flash the document.title to surface async events (copy success, notify toggle).
-    // Restores the original title after 3 seconds.
+    // Restores the base title 3s after the last flash (overlapping flashes don't clobber it).
+    let flashTimer = null, baseTitle = null;
     function flashTitle(msg) {
-        const original = document.title;
+        if (flashTimer === null) baseTitle = document.title;
+        clearTimeout(flashTimer);
         document.title = msg;
-        setTimeout(() => { document.title = original; }, 3000);
+        flashTimer = setTimeout(() => { document.title = baseTitle; flashTimer = null; }, 3000);
     }
 
     // --- INITIALIZATION CALLS ---

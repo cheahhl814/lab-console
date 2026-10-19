@@ -2,11 +2,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-// os.homedir() reads process.env.HOME, so pointing HOME at a scratch directory
-// sandboxes every file-mutation route away from the real filesystem. Must happen
-// before requiring server.js, since userHomeDir is captured at module load time.
+// Stub os.homedir() so every file-mutation route is sandboxed away from the real
+// filesystem. (Setting process.env.HOME doesn't work: Jest hands tests a copy of
+// process.env, while os.homedir() reads the real environment.) Must happen before
+// requiring server.js, since userHomeDir is captured at module load time.
 const testHome = fs.mkdtempSync(path.join(os.tmpdir(), 'web-terminal-test-'));
-process.env.HOME = testHome;
+jest.spyOn(os, 'homedir').mockReturnValue(testHome);
 process.env.AUTH_USER = 'testuser';
 process.env.AUTH_PASS = 'testpass';
 
@@ -110,4 +111,16 @@ describe('global error handler', () => {
         expect(res.text).toBe('Internal server error.');
         expect(res.text).not.toMatch(/at .*\.js:\d+/); // no stack trace leaked
     });
+});
+
+describe('upload', () => {
+    test('moves an over-200MB-default-sized file into the destination and cleans up temp', async () => {
+        const big = Buffer.alloc(201 * 1024 * 1024); // above the old 200MB default cap
+        const res = await request(app).post('/upload').auth(...AUTH)
+            .field('destination', 'uploads')
+            .attach('file', big, 'big.bin');
+        expect(res.status).toBe(200);
+        expect(fs.statSync(path.join(testHome, 'uploads', 'big.bin')).size).toBe(big.length);
+        expect(fs.readdirSync(path.join(testHome, '.cache', 'web_terminal_uploads'))).toEqual([]);
+    }, 30000);
 });
