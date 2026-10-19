@@ -1,5 +1,5 @@
 {
-  "name": "html-terminal",
+  "name": "lab-console",
   "version": "0.3.0",
   "description": "A simple HTML-based terminal emulator",
   "main": "server.js",

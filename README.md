@@ -1,4 +1,4 @@
-# HTML Terminal Emulator
+# lab-console
 
 A simple, web-based terminal emulator that provides a real-time interface to a `fish` shell running on a `Node.js` backend. It also includes a file browser and a code editor with syntax highlighting.
 
