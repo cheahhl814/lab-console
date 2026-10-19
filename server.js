@@ -514,13 +514,20 @@ const shell = os.platform() === 'win32' ? 'powershell.exe' : 'fish';
 app.use('/node_modules', express.static(__dirname + '/node_modules'));
 app.use(express.static(__dirname + '/public'));
 
+// Don't leak a parent herdr session into the shell, or nested herdr refuses to start.
+const ptyEnv = { ...process.env };
+for (const key of Object.keys(ptyEnv)) {
+    if (key.startsWith('HERDR_')) delete ptyEnv[key];
+}
+if (ptyEnv.TERM_PROGRAM === 'herdr') delete ptyEnv.TERM_PROGRAM;
+
 app.ws('/ws', (ws, req) => {
     const term = pty.spawn(shell, [], {
         name: 'xterm',
         cols: 80,
         rows: 30,
         cwd: process.env.HOME,
-        env: process.env
+        env: ptyEnv
     });
 
     term.on('data', (data) => {
