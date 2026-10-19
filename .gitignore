@@ -4,3 +4,5 @@ server.log
 .env
 .codebase-index/
 .genkit/
+docs/
+ip.txt
