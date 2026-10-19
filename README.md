@@ -1,199 +1,137 @@
 # lab-console
 
-A simple, web-based terminal emulator that provides a real-time interface to a `fish` shell running on a `Node.js` backend. It also includes a file browser and a code editor with syntax highlighting.
+[![Version](https://img.shields.io/badge/version-0.3.0-blue)](#-installation)
+[![Type](https://img.shields.io/badge/type-web%20app-blueviolet)](#-installation)
 
-This application uses `xterm.js` for the frontend terminal rendering and `node-pty` on the backend to spawn and communicate with a native shell process. The code editor is powered by Monaco Editor, the same editor that powers VS Code.
+A browser-based console for a shared bioinformatics workstation: a real `fish` shell (via `node-pty` + `xterm.js`) in tabs, a file browser for the user's home directory (upload with progress, download, ZIP, copy/move/rename/delete), a Monaco code editor, and a live CPU/RAM/GPU status bar — served by one Node.js process behind HTTP Basic Auth.
 
-## Features
+**Repository**: https://github.com/cheahhl814/lab-console
 
-- A fully functional terminal rendered in a web browser.
-- Uses the `fish` shell by default.
-- Real-time, low-latency communication using WebSockets.
-- A file browser to navigate the file system, with features like create, rename, delete, upload, and download.
-- A code editor with syntax highlighting for many languages.
-- Accessible locally or from other devices on the same local network.
+> [!NOTE]
+> Current version: **v0.3.0** (updated 2026-10-19).
 
-## Tech Stack
+## Contents
 
-- **Backend:** Node.js, Express, `express-ws`, `node-pty`
-- **Frontend:** HTML, CSS, JavaScript, `xterm.js`, Monaco Editor
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Repository layout](#-repository-layout)
+- [Hard guarantees](#-hard-guarantees)
+- [Provenance](#provenance)
 
-## System-Level Dependencies
+## 🚀 Installation
 
-Before installing the Node.js packages, ensure your system has the required build tools. The `node-pty` package, which is crucial for the terminal functionality, needs to be compiled from source during installation.
+**Option A — give your AI agent this prompt:**
 
-**Required tools:**
-
-- A C++ compiler (like `g++`)
-- `make`
-- `python` (v3.x)
-
-**Installation on Debian/Ubuntu:**
-
-```bash
-sudo apt-get update
-sudo apt-get install -y build-essential python3
+```text
+Install lab-console from https://github.com/cheahhl814/lab-console —
+clone it, make sure Node.js, the fish shell, and a C++ build toolchain
+(g++, make, python3) are installed, then run `npm install` and `npm test`.
+Copy .env.example to .env and ask me for the AUTH_USER / AUTH_PASS values.
+Confirm when the tests pass.
 ```
 
-**Installation on CentOS/RHEL:**
+**Option B — manual install:**
 
 ```bash
-sudo yum groupinstall -y 'Development Tools'
-sudo yum install -y python3
+git clone https://github.com/cheahhl814/lab-console.git
+cd lab-console
+npm install
+npm test
 ```
 
-**Installation on Arch Linux:**
+`node-pty` compiles a native module during `npm install`, so the machine needs a C++ toolchain plus `make` and `python3`. The `fish` shell must also be installed — it is the shell each terminal tab spawns.
+
+| Platform | Command |
+|:---------|:--------|
+| Debian / Ubuntu | `sudo apt-get install -y build-essential python3 fish` |
+| CentOS / RHEL | `sudo yum groupinstall -y 'Development Tools' && sudo yum install -y python3 fish` |
+| Arch Linux | `sudo pacman -S --needed base-devel python fish` |
+| No root (HPC) | `micromamba create -n node-env -c conda-forge nodejs fish compilers make python` |
+
+> [!TIP]
+> If `node-pty` fails to load after a Node.js upgrade, run `npm rebuild`.
+
+## 💡 Usage
+
+### Start the server
+
+Credentials are required — the server refuses to start without them.
 
 ```bash
-sudo pacman -S --needed base-devel python
+cp .env.example .env        # then set AUTH_USER and AUTH_PASS in .env
+set -a; . ./.env; set +a
+npm start
 ```
 
-**For `micromamba` / `conda` users (on HPC or without root access):**
+Open `http://localhost:3000` and log in. From another device on the same network, use `http://<server-ip>:3000` (find the IP with `ip addr show | grep "inet "`; if a firewall blocks it, `sudo ufw allow 3000/tcp`).
 
-If you are using `micromamba` or `conda`, you can create an environment with all the necessary dependencies using the following command. This is the recommended method for HPC environments where you don't have root access.
+### What you can do
 
-```bash
-micromamba create -n node-env -c conda-forge nodejs fish compilers make python
-micromamba activate node-env
+- **Terminal** — open it as a side panel or in its own browser tab (terminal menu → *New Browser Tab*); `+` adds shell tabs. The terminal-only tab adds a font-size stepper, a "shell is idle" notification toggle, and a copy-session button.
+- **File browser** — list / grid / details views, a hidden-file toggle, and a right-click menu for new file/folder, upload, download (folders as ZIP), copy, cut, paste, duplicate, rename, and delete. Uploads show a progress popup with a cancel button.
+- **Editor** — *Open with Monaco* (or click a text file) to edit in the browser.
+- **Themes** — Default, Dracula, Solarized Light, and Github, applied to the whole app and every terminal.
+
+### Configuration
+
+All settings are environment variables (see `.env.example`):
+
+| Variable | Default | Purpose |
+|:---------|:--------|:--------|
+| `AUTH_USER` / `AUTH_PASS` | — (required) | Basic-auth credentials |
+| `PORT` | `3000` | Listen port |
+| `TLS_CERT_PATH` / `TLS_KEY_PATH` | unset | If both are set, serve HTTPS instead of HTTP |
+| `LOG_LEVEL` | `info` | Structured (pino) log level |
+| `UPLOAD_MAX_FILE_SIZE_MB` | no limit | Per-file upload cap |
+| `UPLOAD_MAX_FILES` | `20` | Files per upload request |
+
+On first run the server appends `set -g -x fish_greeting ""` to the user's `config.fish` to suppress fish's greeting.
+
+### Keep it running
+
+| Method | Start | Notes |
+|:-------|:------|:------|
+| `pm2` | `AUTH_USER=<user> AUTH_PASS=<password> pm2 start server.js` | pm2 saves the env at start; after changing it, run `pm2 restart server --update-env` |
+| `nohup` | `AUTH_USER=<user> AUTH_PASS=<password> nohup node server.js &` | Output goes to `nohup.out`; stop with `kill <PID>` |
+| systemd | see `deploy/systemd/web-terminal.service` | Reads `.env` via `EnvironmentFile`; logs go to the journal |
+
+## 📁 Repository layout
+
+```text
+lab-console/
+├── server.js                # Express app: auth, file API, uploads, WebSocket PTY, status stats
+├── logger.js                # pino structured logger
+├── public/
+│   ├── index.html           # App shell (toolbar, file browser, terminal panel, status bar)
+│   ├── main.js              # Terminal tabs, file browser, uploads, themes
+│   ├── style.css            # Theme tokens + layout
+│   ├── editor.html          # Monaco editor page
+│   ├── editor.js            # Editor load/save logic
+│   ├── icons.svg            # Toolbar icon sprite
+│   └── vendor/htmx.min.js   # htmx (vendored)
+├── test/server.test.js      # Jest + supertest API tests (sandboxed home dir)
+├── deploy/systemd/          # systemd unit template
+├── .env.example             # Configuration reference
+└── ROADMAP.md               # Planned features
 ```
 
-After activating the environment, you can proceed to install the npm packages.
+## 🔒 Hard guarantees
 
-## Setup and Installation
+- **No anonymous access** — every route, including the terminal WebSocket and static files, is behind Basic Auth, and the server will not start without `AUTH_USER` / `AUTH_PASS`.
+- **File operations stay in the home directory** — file-API paths are resolved and checked against the running user's home; `../` escapes and prefix-sibling tricks return `403`.
+- **No internals leaked** — a global error handler logs the real error server-side and returns a generic message, never a stack trace or file path.
+- **Hardened headers** — `helmet` is enabled (its CSP is off, because htmx and Monaco need it off).
 
-1. **Prerequisites:**
-   
-   - [Node.js](https://nodejs.org/) installed.
-   - The `fish` shell installed on the server machine.
-   - System-level build tools (see above).
+> [!WARNING]
+> Each terminal is a **full shell as the server's user** — anyone who logs in can do anything that user can. There is **no rate limiting** on login attempts, and the default transport is **plain HTTP**. Keep it on a trusted network, use a strong password, and put a reverse proxy with TLS and rate limiting (or `fail2ban`) in front of it before exposing it more widely. Do not expose it directly to the public internet.
 
-2. **Install Dependencies:**
-   Clone the repository (or ensure all files are present) and run the following command in the project root to install the necessary packages:
-   
-   ```bash
-   npm install
-   or
-   npm rebuild
-   ```
+> [!IMPORTANT]
+> Known limitation: with `TLS_CERT_PATH` / `TLS_KEY_PATH` set, pages are served over HTTPS but the terminal WebSocket is not yet attached to the HTTPS server, so terminal tabs do not connect. Terminate TLS at a reverse proxy instead for now.
 
-## Dependencies
+## Provenance
 
-This project relies on the following packages, which are automatically installed when you run `npm install`:
+Built on [xterm.js](https://github.com/xtermjs/xterm.js) (terminal rendering), [node-pty](https://github.com/microsoft/node-pty) (pseudoterminals), [Express](https://expressjs.com/) with `express-ws`, [htmx](https://htmx.org/) (file-browser updates), and [Monaco Editor](https://github.com/microsoft/monaco-editor) (loaded from cdnjs).
 
-### Backend (Node.js)
+## License
 
-- **`express`**: A minimal and flexible Node.js web application framework.
-- **`express-ws`**: Adds WebSocket endpoints to your Express application.
-- **`express-basic-auth`**: A simple middleware for adding basic HTTP authentication.
-- **`node-pty`**: A library for spawning and communicating with pseudoterminals (PTYs).
-- **`archiver`**: A library for creating archive files (e.g., `.zip`).
-- **`multer`**: A middleware for handling `multipart/form-data`, used for file uploads.
-
-### Frontend
-
-- **`xterm`**: A powerful, fast, and fully-featured terminal emulator for the web.
-- **`xterm-addon-fit`**: An addon for `xterm.js` that enables the terminal to resize itself to fit its container.
-- **Monaco Editor**: The code editor that powers VS Code, used for the in-browser editor. It is loaded from a CDN.
-
-## Usage
-
-1. **Start the Server:**
-   Run the following command to start the backend server:
-   
-   ```bash
-   AUTH_USER=<user> AUTH_PASS=<password> node server.js
-   ```
-   
-   The server will start on port 3000 (override with `PORT`).
-
-2. **Local Access:**
-   Open your web browser and navigate to:
-   
-   ```
-   http://localhost:3000
-   ```
-
-3. **Remote Access:**
-   You can access the terminal from any other device on the same network.
-   
-   - First, find the local IP address of the machine running the server. On Linux/macOS, you can use:
-     
-     ```bash
-     ip addr show | grep "inet "
-     ```
-   
-   - Then, on the remote device, navigate to `http://<YOUR_LOCAL_IP>:3000` (e.g., `http://192.168.1.113:3000`).
-   
-   - If the firewall block access from other machine, run
-     
-     ```bash
-     sudo ufw allow 3000/tcp
-     ```
-
-## Authentication
-
-The application uses HTTP Basic Authentication. Credentials come from the `AUTH_USER` and `AUTH_PASS` environment variables; the server refuses to start if either is unset. See `.env.example` for these and the other optional settings (`PORT`, `TLS_CERT_PATH`/`TLS_KEY_PATH`, `LOG_LEVEL`, upload limits).
-
-The server does **not** rate-limit requests, so nothing slows down password guessing. Use a strong password, and if the server is reachable beyond a trusted network, put a reverse proxy with rate limiting (or `fail2ban`) in front of it.
-
-## Configuration
-
-### Fish Greeting
-
-On the first run, the application will create a file at `~/.config/fish/config.fish` to disable the default greeting message of the `fish` shell. This is done to provide a cleaner terminal experience.
-
-## Running in the Background (Persistence)
-
-To keep the server running even after you close your terminal, you can use a process manager or the `nohup` command.
-
-### Recommended Method: `pm2`
-
-`pm2` is a powerful process manager for Node.js applications. It keeps your app alive, manages logs, and simplifies common admin tasks.
-
-1. **Install `pm2` globally (one-time setup):**
-   
-   ```bash
-   npm install pm2 -g
-   ```
-
-2. **Start the server with `pm2`:**
-   
-   ```bash
-   AUTH_USER=<user> AUTH_PASS=<password> pm2 start server.js
-   ```
-   
-   `pm2` saves these variables when the process starts, so `pm2 restart server` keeps using them. After changing them, run `pm2 restart server --update-env`.
-
-3. **Manage the application:**
-   
-   - `pm2 list`: List all running processes.
-   - `pm2 stop server`: Stop the server.
-   - `pm2 restart server`: Restart the server.
-   - `pm2 logs server`: View server logs.
-
-### Alternative Method: `nohup`
-
-`nohup` is a standard Linux command that allows a process to keep running after the user has logged out.
-
-1. **Start the server:**
-   
-   ```bash
-   AUTH_USER=<user> AUTH_PASS=<password> nohup node server.js &
-   ```
-   
-   Output will be redirected to a `nohup.out` file in the project directory.
-
-2. **Stop the server:**
-   You must find and kill the process manually.
-   
-   ```bash
-   # Find the Process ID (PID)
-   ps aux | grep "node server.js"
-   
-   # Use the PID to kill the process
-   kill <PID>
-   ```
-
-## Security Warning
-
-The application is configured to be accessible from any device on your local network. Do not expose this server directly to the public internet, as it could grant unauthorized access to your system. There is no built-in rate limiting (see [Authentication](#authentication)).
+Declared as ISC in `package.json`; no license file is included yet.
